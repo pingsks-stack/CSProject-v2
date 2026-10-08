@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CI: true
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      # ให้ postinstall ของ mongodb-memory-server (ตอน npm ci) และชุดทดสอบใช้ไฟล์ mongod ที่เดียวกัน จึงแคชได้
+      - name: Set MongoDB binary download dir
+        run: echo "MONGOMS_DOWNLOAD_DIR=$HOME/.cache/mongodb-binaries" >> "$GITHUB_ENV"
+
+      - name: Cache MongoDB binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: mongodb-binaries-${{ runner.os }}-
+
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Typecheck tests
+        run: npx tsc -p server/test --noEmit
+      - run: npm run build
+      - run: npm test

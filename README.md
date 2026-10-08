@@ -26,10 +26,13 @@ CSProject/
 │  │  ├─ routes/           API แต่ละกลุ่ม (auth, projects, requests, content, chat, dashboard, admin)
 │  │  ├─ models/           โครงสร้างข้อมูล MongoDB
 │  │  ├─ lib/              สิทธิ์การเข้าถึง, รหัสผ่าน, อัปโหลดไฟล์, แจ้งเตือน
+│  │  ├─ scripts/          create-admin, backup, restore
 │  │  └─ seed.ts           ข้อมูลตัวอย่าง
+│  ├─ test/                ชุดทดสอบ API (npm test)
 │  ├─ uploads/             ไฟล์ที่ผู้ใช้อัปโหลด (ไม่เก็บใน git)
 │  └─ data/                MongoDB ของเครื่องพัฒนา (ไม่เก็บใน git)
 ├─ docs/                   คู่มือติดตั้ง
+├─ .github/workflows/      GitHub Actions (typecheck, build, test ทุกครั้งที่ push)
 └─ package.json            สั่งรัน client + server พร้อมกัน
 ```
 

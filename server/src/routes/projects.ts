@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import mongoose from 'mongoose'
 import { z } from 'zod'
 import { projectFor, relation } from '../lib/access.js'
 import { me, requireAuth, requireRole } from '../lib/auth.js'
@@ -31,7 +32,8 @@ async function assertNamesFree(th: string, en: string, exceptId?: unknown) {
 
 async function assertTypeExists(typeId: string | null | undefined) {
   if (!typeId) return null
-  const t = await ProjectType.findById(objectId(typeId))
+  if (!mongoose.isValidObjectId(typeId)) throw badRequest('ไม่พบประเภทโครงงานนี้')
+  const t = await ProjectType.findById(typeId)
   if (!t) throw badRequest('ไม่พบประเภทโครงงานนี้')
   return t._id
 }

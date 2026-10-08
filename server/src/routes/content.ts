@@ -15,7 +15,7 @@ export const projectContentRouter = Router({ mergeParams: true })
 // API ที่อ้างด้วย id ของตัวเอง: /api/submissions/:sid, /api/codes/:cid
 export const contentRouter = Router()
 projectContentRouter.use(requireAuth)
-contentRouter.use(requireAuth)
+contentRouter.use(['/submissions', '/codes'], requireAuth)
 
 // :id ของโครงงานมาจาก router แม่ (mergeParams) ซึ่ง type ของ Express ไม่รู้จัก
 const pid = (req: Request) => String((req.params as Record<string, string>).id)

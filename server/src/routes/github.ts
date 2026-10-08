@@ -93,7 +93,8 @@ export async function githubWebhook(req: Request, res: Response) {
     res.status(404).json({ error: 'ยังไม่ได้เปิดใช้ webhook' })
     return
   }
-  const body = req.body as Buffer
+  // ไม่มี body (หรือไม่มี Content-Type) req.body จะไม่ใช่ Buffer
+  const body = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0)
   const sig = String(req.headers['x-hub-signature-256'] ?? '')
   const expected = 'sha256=' + crypto.createHmac('sha256', config.githubWebhookSecret).update(body).digest('hex')
   if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {

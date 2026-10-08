@@ -10,7 +10,7 @@ import { User } from '../models/User.js'
 import { getSettings, orderedTypes } from '../models/misc.js'
 
 export const metaRouter = Router()
-metaRouter.use(requireAuth)
+metaRouter.use(['/meta', '/users', '/teachers', '/projects'], requireAuth)
 
 // ข้อมูลอ้างอิงที่หน้าเว็บใช้ร่วมกัน
 metaRouter.get('/meta', async (_req, res) => {

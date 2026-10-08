@@ -67,7 +67,7 @@ export function projectDto(p: ProjectDoc, r?: Relation) {
     passedAt: p.passedAt,
     createdAt: (p as unknown as { createdAt: Date }).createdAt,
     members: p.members.map((m) => ({
-      user: userRef(m.user, contacts),
+      user: contacts ? userRef(m.user, true) : { ...userRef(m.user), studentId: undefined },
       kind: m.kind,
       teacherRole: m.teacherRole ?? null,
       vote: m.vote ?? null,

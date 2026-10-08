@@ -15,7 +15,7 @@ const MAX_README_BYTES = 300 * 1024
 
 // รับได้ทั้ง https://github.com/owner/repo, github.com/owner/repo.git และ owner/repo
 export function parseRepo(input: string) {
-  const s = input.trim().replace(/^https?:\/\//, '').replace(/^(www\.)?github\.com\//, '').replace(/\.git$/, '').replace(/\/+$/, '')
+  const s = input.trim().replace(/^https?:\/\//, '').replace(/^(www\.)?github\.com\//, '').replace(/\/+$/, '').replace(/\.git$/, '')
   const [owner, repo, ...rest] = s.split('/')
   if (!owner || !repo || rest.length > 0 && !['tree', 'blob'].includes(rest[0]) || !NAME.test(owner) || !NAME.test(repo)) {
     throw badRequest('ลิงก์ GitHub ไม่ถูกต้อง ตัวอย่าง: https://github.com/username/project')
