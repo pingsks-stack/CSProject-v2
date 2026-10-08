@@ -62,6 +62,24 @@ jobs:
             echo "::notice::ยังไม่ได้ตั้ง CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID จึงข้ามการ deploy เดโม"
           fi
 
+      # ตรวจ token/Account ID ก่อน build (ไม่แสดงค่าลับหรือชื่อบัญชีใน log เพราะ repo เป็น public)
+      - name: Verify Cloudflare token
+        if: steps.cf.outputs.ready == 'true'
+        run: |
+          api() { curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4$1"; }
+          status=$(api /user/tokens/verify | jq -r '.result.status // "invalid"')
+          echo "token status: $status"
+          if [ "$status" != "active" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN ใช้ไม่ได้ (สถานะ: $status) — สร้าง token ใหม่จากแม่แบบ Edit Cloudflare Workers แล้วอัปเดต secret"
+            exit 1
+          fi
+          if ! api "/accounts/$CLOUDFLARE_ACCOUNT_ID" | jq -e '.success' > /dev/null; then
+            echo "token เข้าถึงได้ $(api '/accounts?per_page=50' | jq '.result | length') บัญชี"
+            echo "::error::token เข้าถึง CLOUDFLARE_ACCOUNT_ID ไม่ได้ — ตรวจว่าใส่ Account ID (ไม่ใช่ Zone ID) และตอนสร้าง token เลือกบัญชีนี้ใน Account Resources"
+            exit 1
+          fi
+          echo "token เข้าถึง Account ID ที่ตั้งไว้ได้"
+
       - uses: actions/checkout@v5
         if: steps.cf.outputs.ready == 'true'
 
