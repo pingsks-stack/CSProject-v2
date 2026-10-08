@@ -86,6 +86,8 @@ jobs:
             exit 1
           fi
           echo "token เข้าถึง Account ID ที่ตั้งไว้ได้"
+          echo "อ่านรายการ Workers: $(api "/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts" | jq -c '{success, errors: [.errors[]? | {code, message}]}')"
+          echo "แผน Workers: $(api "/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subscription" | jq -c '{success, errors: [.errors[]? | {code, message}]}')"
 
       - uses: actions/checkout@v5
         if: steps.cf.outputs.ready == 'true'
@@ -104,3 +106,8 @@ jobs:
         if: steps.cf.outputs.ready == 'true'
         working-directory: deploy/cloudflare
         run: npx wrangler deploy
+
+      # deploy พัง: แสดงรหัส/ข้อความ error จาก API ของ Cloudflare (ใน log ของ wrangler)
+      - name: Show Cloudflare API errors
+        if: failure() && steps.cf.outputs.ready == 'true'
+        run: grep -hoE '"(code|message)": ?("[^"]*"|[0-9]+)' ~/.config/.wrangler/logs/*.log | sort | uniq -c | tail -30 || true
