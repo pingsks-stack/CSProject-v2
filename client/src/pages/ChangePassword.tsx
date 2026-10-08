@@ -2,9 +2,11 @@ import { KeyRound, ShieldCheck } from 'lucide-react'
 import { useRef, useState, type FormEvent } from 'react'
 import { PageHeader, Panel, Spinner, useAction } from '../components/ui'
 import { api } from '../lib/api'
+import { usePublicConfig } from '../lib/queries'
 
 // หน้า "เปลี่ยนรหัสผ่าน" ของตัวเอง (การรีเซ็ตรหัสผ่านผู้อื่นอยู่ในหน้าผู้ใช้งานของแอดมิน)
 export default function ChangePassword() {
+  const demo = usePublicConfig().data?.demo
   const formRef = useRef<HTMLFormElement>(null)
   const [error, setError] = useState('')
   const change = useAction((body: { current: string; password: string }) => api.post('/auth/password', body), {
@@ -33,6 +35,11 @@ export default function ChangePassword() {
     <>
       <PageHeader title="เปลี่ยนรหัสผ่าน" subtitle="ตั้งรหัสผ่านใหม่สำหรับเข้าสู่ระบบ" />
       <div className="max-w-xl">
+        {demo && (
+          <p className="mb-4 rounded-xl border border-gold/40 bg-gold/10 px-4 py-3 text-sm">
+            ระบบทดลอง (เดโม) ล็อกรหัสผ่านของบัญชีทดสอบไว้ที่ <b className="font-mono">{demo.password}</b> เพื่อให้ทุกคนเข้าใช้ได้ตลอด จึงเปลี่ยนรหัสผ่านไม่ได้
+          </p>
+        )}
         <Panel title="รหัสผ่านของคุณ" sub="รหัสผ่านใหม่ต้องยาว 6–50 ตัวอักษร">
           <form ref={formRef} onSubmit={onSubmit} className="flex flex-col gap-4" onInput={() => error && setError('')}>
             <label className="field">

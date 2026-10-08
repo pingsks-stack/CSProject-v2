@@ -2,7 +2,7 @@ import crypto from 'node:crypto'
 import { Router } from 'express'
 import { z } from 'zod'
 import { config } from '../config.js'
-import { clearSession, me, requireAuth, revokeSessions, setSession } from '../lib/auth.js'
+import { assertNotDemo, clearSession, me, requireAuth, revokeSessions, setSession } from '../lib/auth.js'
 import { badRequest, HttpError, parse } from '../lib/http.js'
 import { buildMail, mailEnabled, queueMail } from '../lib/mail.js'
 import { hashPassword, verifyPassword } from '../lib/password.js'
@@ -115,6 +115,7 @@ authRouter.put('/profile', requireAuth, async (req, res) => {
 })
 
 authRouter.post('/password', requireAuth, async (req, res) => {
+  assertNotDemo()
   const body = parse(z.object({ current: z.string(), password: passwordRule }), req.body)
   const user = await User.findById(me(req)._id).select('+passwordHash')
   if (!user || !(await verifyPassword(body.current, user.passwordHash))) throw badRequest('รหัสผ่านปัจจุบันไม่ถูกต้อง')
@@ -130,6 +131,7 @@ authRouter.post('/password', requireAuth, async (req, res) => {
 const sha256 = (s: string) => crypto.createHash('sha256').update(s).digest('hex')
 
 authRouter.post('/forgot', async (req, res) => {
+  assertNotDemo()
   const { login } = parse(z.object({ login: z.string().trim().min(1, 'กรุณากรอกชื่อผู้ใช้หรืออีเมล').max(100) }), req.body)
   const key = `forgot|${req.ip}`
   if (tooMany(key)) throw new HttpError(429, 'ขอบ่อยเกินไป กรุณารอ 15 นาที')
@@ -157,6 +159,7 @@ authRouter.post('/forgot', async (req, res) => {
 })
 
 authRouter.post('/reset', async (req, res) => {
+  assertNotDemo()
   const body = parse(z.object({ token: z.string().min(20).max(200), password: passwordRule }), req.body)
   const r = await PasswordReset.findOne({ tokenHash: sha256(body.token), expiresAt: { $gt: new Date() } })
   const user = r ? await User.findById(r.user).select('+passwordHash') : null

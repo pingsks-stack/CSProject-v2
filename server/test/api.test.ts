@@ -1855,6 +1855,43 @@ describe('deadline reminders', () => {
   })
 })
 
+describe('demo mode: demo account passwords stay Demo@1234', () => {
+  let seed: Seed
+
+  before(async () => {
+    seed = await ctx.reset()
+    ctx.config.demoMode = true
+  })
+  after(() => {
+    ctx.config.demoMode = false
+  })
+
+  test('config lists demo accounts for the login page', async () => {
+    const c = (await ctx.client().get('/public/config')).data
+    assert.equal(c.demo.password, 'Demo@1234')
+    assert.ok(c.demo.accounts.some((a: Json) => a.username === 'demo_admin'))
+  })
+
+  test('nobody can change or reset passwords', async () => {
+    const st = await login('demo_student')
+    assert.equal((await st.post('/auth/password', { current: 'Demo@1234', password: 'Hacked@123' })).status, 403)
+    assert.equal((await ctx.client().post('/auth/forgot', { login: 'demo_student' })).status, 403)
+    const ad = await login('demo_admin')
+    assert.equal((await ad.post(`/admin/users/${seed.users.demo_teacher}/reset-password`, { password: 'Hacked@123' })).status, 403)
+    // รหัสเดิมยังเข้าได้
+    assert.equal((await ctx.client().post('/auth/login', { username: 'demo_student', password: 'Demo@1234' })).status, 200)
+  })
+
+  test('demo accounts cannot be deleted or have their role changed; other accounts still can', async () => {
+    const ad = await login('demo_admin')
+    assert.equal((await ad.patch(`/admin/users/${seed.users.demo_student7}`, { role: 'teacher' })).status, 403)
+    assert.equal((await ad.del(`/admin/users/${seed.users.demo_student7}`)).status, 403)
+    const created = await ad.post('/admin/users', { role: 'student', name: 'ผู้ใช้ ทดลอง', username: 'visitor1', email: 'visitor1@x.th', studentId: '69000001', password: 'abcdef' })
+    assert.equal(created.status, 201)
+    assert.equal((await ad.del(`/admin/users/${created.data.user.id}`)).status, 204)
+  })
+})
+
 // ===================================================================================
 test('no test reached the network outside this machine', () => {
   assert.deepEqual(ctx.externalFetches, [])

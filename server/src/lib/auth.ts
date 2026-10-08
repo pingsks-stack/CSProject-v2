@@ -60,6 +60,13 @@ export function requireRole(...roles: Role[]) {
   }
 }
 
+// โหมดเดโม: รหัสผ่านของบัญชีทดสอบคงที่ (Demo@1234) ไม่ให้ใครเปลี่ยนจนคนอื่นเข้าไม่ได้
+export const DEMO_LOCKED = 'ระบบทดลอง (เดโม) ล็อกรหัสผ่านไว้ เพื่อให้ทุกคนเข้าด้วยบัญชีทดสอบได้ตลอด'
+export function assertNotDemo() {
+  if (config.demoMode) throw forbidden(DEMO_LOCKED)
+}
+export const isDemoAccount = (username: string) => config.demoMode && username.startsWith('demo_')
+
 // เปลี่ยนรหัสผ่านแล้ว: token ล็อกอินเดิมทุกเครื่องใช้ไม่ได้
 export function revokeSessions(user: UserDoc) {
   user.sessionVersion = (user.sessionVersion ?? 0) + 1

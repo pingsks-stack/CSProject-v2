@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { z } from 'zod'
-import { me, requireAuth, requireRole, revokeSessions } from '../lib/auth.js'
-import { badRequest, notFound, objectId, parse } from '../lib/http.js'
+import { assertNotDemo, isDemoAccount, me, requireAuth, requireRole, revokeSessions } from '../lib/auth.js'
+import { badRequest, forbidden, notFound, objectId, parse } from '../lib/http.js'
 import { hashPassword, tempPassword } from '../lib/password.js'
 import { csvDate, sendCsv, toCsv } from '../lib/csv.js'
 import { PROJECT_POPULATE, containsRe, escapeRegex } from '../lib/serialize.js'
@@ -82,6 +82,7 @@ adminRouter.patch('/users/:id', async (req, res) => {
     req.body,
   )
   if (body.role && body.role !== user.role) {
+    if (isDemoAccount(user.username)) throw forbidden('ระบบทดลอง (เดโม) เปลี่ยนบทบาทของบัญชีทดสอบไม่ได้')
     if (user.id === me(req).id) throw badRequest('เปลี่ยนบทบาทของตัวเองไม่ได้')
     // คนที่อยู่ในโครงงานแล้วห้ามเปลี่ยนบทบาท ไม่งั้นสมาชิกนิสิต/อาจารย์ของโครงงานจะไม่ตรงกับบทบาทจริง
     if (await Project.exists({ 'members.user': user._id })) throw badRequest('ผู้ใช้นี้อยู่ในโครงงาน เปลี่ยนบทบาทไม่ได้')
@@ -93,6 +94,7 @@ adminRouter.patch('/users/:id', async (req, res) => {
 })
 
 adminRouter.post('/users/:id/reset-password', async (req, res) => {
+  assertNotDemo()
   const user = await User.findById(objectId(req.params.id))
   if (!user) throw notFound('ไม่พบผู้ใช้')
   const { password } = parse(z.object({ password: passwordRule.optional() }), req.body ?? {})
@@ -107,6 +109,7 @@ adminRouter.delete('/users/:id', async (req, res) => {
   const user = await User.findById(objectId(req.params.id))
   if (!user) throw notFound('ไม่พบผู้ใช้')
   if (user.id === me(req).id) throw badRequest('ลบบัญชีของตัวเองไม่ได้')
+  if (isDemoAccount(user.username)) throw forbidden('ระบบทดลอง (เดโม) ลบบัญชีทดสอบไม่ได้')
   if (await Project.exists({ 'members.user': user._id })) throw badRequest('ผู้ใช้นี้อยู่ในโครงงาน ลบไม่ได้')
   await user.deleteOne()
   res.status(204).end()
