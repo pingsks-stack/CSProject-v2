@@ -14,6 +14,12 @@ export async function hashPassword(password: string) {
   return `${PREFIX}${ITERATIONS}$${salt.toString('base64')}$${hash.toString('base64')}`
 }
 
+// รหัสผ่านชั่วคราว 10 ตัว (ตัดตัวที่สับสนง่ายออก เช่น 0/O, 1/l/I)
+export function tempPassword() {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
+  return Array.from(crypto.randomBytes(10), (b) => chars[b % chars.length]).join('')
+}
+
 export async function verifyPassword(password: string, stored: string | undefined | null) {
   if (!stored || !stored.startsWith(PREFIX)) return false
   const [, rounds, salt, expected] = stored.split('$')

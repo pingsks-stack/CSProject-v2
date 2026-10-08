@@ -11,7 +11,7 @@ import {
 } from '../models/Project.js'
 import { ProjectRequest } from '../models/Request.js'
 import { Submission } from '../models/Submission.js'
-import { User } from '../models/User.js'
+import { User, type UserDoc } from '../models/User.js'
 import { Activity, Code, ProjectFile, ProjectType } from '../models/misc.js'
 
 export const projectsRouter = Router()
@@ -58,19 +58,19 @@ const studentIds = (p: ProjectDoc) => students(p).map(memberUserId)
 const teacherIds = (p: ProjectDoc) => teachers(p).map(memberUserId)
 
 // ===================== รายการ / ค้นหา / คลังโครงงาน =====================
-projectsRouter.get('/', async (req, res) => {
-  const user = me(req)
-  const q = parse(
-    z.object({
-      scope: z.enum(['library', 'search', 'mine', 'all']).default('search'),
-      q: z.string().optional(),
-      type: z.string().optional(),
-      status: z.enum(['passed', 'partial', 'pending', 'failed']).optional(),
-      term: z.string().optional(),
-      classLevel: z.coerce.number().int().optional(),
-    }),
-    req.query,
-  )
+export const listQuery = z.object({
+  scope: z.enum(['library', 'search', 'mine', 'all']).default('search'),
+  q: z.string().optional(),
+  type: z.string().optional(),
+  status: z.enum(['passed', 'partial', 'pending', 'failed']).optional(),
+  term: z.string().optional(),
+  classLevel: z.coerce.number().int().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(24),
+})
+
+// เงื่อนไขค้นหาโครงงาน (ใช้ร่วมกับการส่งออกไฟล์ของแอดมิน)
+export async function projectListFilter(q: z.infer<typeof listQuery>, user: UserDoc) {
   const and: Record<string, unknown>[] = []
   if (q.scope === 'library') and.push({ status: 'passed' })
   else if (q.scope === 'mine') and.push({ 'members.user': user._id })
@@ -91,11 +91,23 @@ projectsRouter.get('/', async (req, res) => {
   if (q.status === 'pending') and.push({ status: 'pending', passCount: 0 })
   if (q.term) and.push({ term: q.term })
   if (q.classLevel) and.push({ classLevel: q.classLevel })
+  return and.length ? { $and: and } : {}
+}
 
-  const list = await Project.find(and.length ? { $and: and } : {})
-    .sort({ createdAt: -1 })
-    .limit(q.scope === 'mine' ? 50 : 300)
-    .populate(PROJECT_POPULATE)
+projectsRouter.get('/', async (req, res) => {
+  const user = me(req)
+  const q = parse(listQuery, req.query)
+  const filter = await projectListFilter(q, user)
+  // "โครงงานของฉัน" มีไม่กี่รายการ ไม่ต้องแบ่งหน้า
+  const paged = q.scope !== 'mine'
+  const [list, total] = await Promise.all([
+    Project.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(paged ? (q.page - 1) * q.pageSize : 0)
+      .limit(paged ? q.pageSize : 50)
+      .populate(PROJECT_POPULATE),
+    Project.countDocuments(filter),
+  ])
   const ids = list.map((p) => p._id)
   const [files, codes] = await Promise.all([countByProject(ProjectFile, ids), countByProject(Code, ids)])
 
@@ -120,6 +132,9 @@ projectsRouter.get('/', async (req, res) => {
       chapterCount: chapters.get(p.id) ?? 0,
       pendingInvites: invites.get(p.id) ?? 0,
     })),
+    total,
+    page: paged ? q.page : 1,
+    pageSize: paged ? q.pageSize : total,
   })
 })
 
@@ -225,7 +240,7 @@ projectsRouter.post('/:id/vote', async (req, res) => {
     title: vote === 'pass' ? `${user.name} ให้ผ่านโครงงาน` : `${user.name} ให้โครงงานไม่ผ่าน`,
     detail: p.nameTh,
     link: `/projects/${p.id}`,
-  })
+  }, undefined, { email: vote === 'fail' })
   if (nowPassed) {
     await notify([...studentIds(p), ...teacherIds(p)], { icon: 'award', title: 'โครงงานผ่านครบ 3/3 แล้ว', detail: p.nameTh, link: `/projects/${p.id}` })
   }

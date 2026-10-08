@@ -12,6 +12,10 @@ const userSchema = new Schema(
     mobile: { type: String, trim: true, default: '' },
     studentId: { type: String, trim: true, default: '' },
     role: { type: String, enum: ROLES, required: true, default: 'student' },
+    // รับการแจ้งเตือนทางอีเมล (ปิดได้ที่หน้าโปรไฟล์)
+    emailNotifications: { type: Boolean, default: true },
+    // เพิ่มขึ้นทุกครั้งที่เปลี่ยน/รีเซ็ตรหัสผ่าน token ล็อกอินรุ่นเก่าจะใช้ไม่ได้ (= ออกจากระบบทุกเครื่อง)
+    sessionVersion: { type: Number, default: 0 },
   },
   { timestamps: true },
 )
@@ -30,5 +34,6 @@ export function publicUser(u: UserDoc) {
     mobile: u.mobile,
     studentId: u.studentId,
     role: u.role as Role,
+    emailNotifications: u.emailNotifications !== false,
   }
 }

@@ -75,6 +75,18 @@ export function projectDto(p: ProjectDoc, r?: Relation) {
       isOwner: m.isOwner,
     })),
     github: p.github ? githubDto(p.github) : null,
+    showcase: showcaseDto(p),
+  }
+}
+
+export function showcaseDto(p: ProjectDoc) {
+  const s = p.showcase
+  return {
+    abstract: s?.abstract ?? '',
+    keywords: s?.keywords ?? [],
+    demoUrl: s?.demoUrl ?? '',
+    videoUrl: s?.videoUrl ?? '',
+    images: (s?.images ?? []).map((i) => ({ id: String(i._id), fileName: i.fileName ?? '' })),
   }
 }
 

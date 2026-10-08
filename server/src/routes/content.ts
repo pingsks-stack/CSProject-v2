@@ -224,7 +224,16 @@ function codeDto(c: InstanceType<typeof Code>, project?: { id: string; nameTh: s
 // คลังซอร์สโค้ด: แอดมินเห็นทั้งหมด คนอื่นเห็นโครงงานที่ผ่านแล้วและโครงงานของตัวเอง
 contentRouter.get('/codes', async (req, res) => {
   const user = me(req)
-  const q = parse(z.object({ q: z.string().optional(), lang: z.string().optional(), project: z.string().optional() }), req.query)
+  const q = parse(
+    z.object({
+      q: z.string().optional(),
+      lang: z.string().optional(),
+      project: z.string().optional(),
+      page: z.coerce.number().int().min(1).default(1),
+      pageSize: z.coerce.number().int().min(1).max(100).default(50),
+    }),
+    req.query,
+  )
   const projFilter: Record<string, unknown> = user.role === 'admin' ? {} : { $or: [{ status: 'passed' }, { 'members.user': user._id }] }
   const projects = await Project.find(projFilter).select('nameTh')
   const names = new Map(projects.map((p) => [p.id as string, p.nameTh]))
@@ -239,8 +248,16 @@ contentRouter.get('/codes', async (req, res) => {
     const matchProjects = projects.filter((p) => re.test(p.nameTh)).map((p) => p._id)
     filter.$or = [{ functionName: re }, { code: re }, { project: { $in: matchProjects } }]
   }
-  const codes = await Code.find(filter).sort({ updatedAt: -1 }).limit(300).populate('updatedBy', 'name')
-  res.json({ codes: codes.map((c) => codeDto(c, { id: String(c.project), nameTh: names.get(String(c.project)) ?? '' })) })
+  const [codes, total] = await Promise.all([
+    Code.find(filter).sort({ updatedAt: -1 }).skip((q.page - 1) * q.pageSize).limit(q.pageSize).populate('updatedBy', 'name'),
+    Code.countDocuments(filter),
+  ])
+  res.json({
+    codes: codes.map((c) => codeDto(c, { id: String(c.project), nameTh: names.get(String(c.project)) ?? '' })),
+    total,
+    page: q.page,
+    pageSize: q.pageSize,
+  })
 })
 
 async function codeFor(req: Request, need: 'view' | 'edit') {

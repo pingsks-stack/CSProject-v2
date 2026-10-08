@@ -11,7 +11,11 @@
     "build": "npm run build -w server && npm run build -w client",
     "start": "npm run start -w server",
     "seed": "npm run seed -w server",
-    "typecheck": "npm run typecheck -w server && npm run typecheck -w client"
+    "typecheck": "npm run typecheck -w server && npm run typecheck -w client",
+    "test": "npm run test -w server",
+    "create-admin": "npm run create-admin -w server --",
+    "backup": "npm run backup -w server",
+    "restore": "npm run restore -w server --"
   },
   "devDependencies": {
     "concurrently": "^10.0.5"

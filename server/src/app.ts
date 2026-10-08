@@ -15,6 +15,7 @@ import { githubWebhook, projectGithubRouter } from './routes/github.js'
 import { metaRouter } from './routes/meta.js'
 import { projectsRouter } from './routes/projects.js'
 import { publicRouter } from './routes/public.js'
+import { projectShowcaseRouter } from './routes/showcase.js'
 import { requestsRouter } from './routes/requests.js'
 
 export function createApp() {
@@ -44,6 +45,7 @@ export function createApp() {
   api.use('/auth', authRouter)
   api.use('/public', publicRouter)
   api.use('/projects/:id/github', projectGithubRouter)
+  api.use('/projects/:id/showcase', projectShowcaseRouter)
   api.use('/projects/:id', projectContentRouter)
   api.use('/projects', projectsRouter)
   api.use('/requests', requestsRouter)

@@ -172,7 +172,7 @@ export async function syncProject(p: ProjectDoc, actor: unknown, force = false) 
       title: `นิสิตอัปเดตงานบน GitHub (${fresh.length} commit)`,
       detail: `${p.nameTh} · ${fresh[0].message}`,
       link: `/projects/${p.id}`,
-    })
+    }, undefined, { email: false })
   }
   return { skipped: false, newCommits: fresh.length }
 }

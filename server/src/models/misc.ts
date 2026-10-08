@@ -120,6 +120,30 @@ const notificationSchema = new Schema(
 notificationSchema.index({ user: 1, createdAt: -1 })
 export const Notification = model('Notification', notificationSchema)
 
+// การเตือนกำหนดส่งที่ส่งไปแล้ว (กันเตือนซ้ำ)
+const reminderSchema = new Schema(
+  {
+    project: { type: Schema.Types.ObjectId, ref: 'Project', required: true },
+    deadline: { type: Schema.Types.ObjectId, ref: 'Deadline', required: true },
+    kind: { type: String, enum: ['before3', 'before1', 'overdue1'], required: true },
+  },
+  { timestamps: { createdAt: true, updatedAt: false } },
+)
+reminderSchema.index({ project: 1, deadline: 1, kind: 1 }, { unique: true })
+export const Reminder = model('Reminder', reminderSchema)
+
+// ลิงก์ตั้งรหัสผ่านใหม่ (เก็บแค่ hash ของ token, MongoDB ลบเองเมื่อหมดอายุ)
+const passwordResetSchema = new Schema(
+  {
+    user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    tokenHash: { type: String, required: true, unique: true },
+    expiresAt: { type: Date, required: true },
+  },
+  { timestamps: { createdAt: true, updatedAt: false } },
+)
+passwordResetSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 })
+export const PasswordReset = model('PasswordReset', passwordResetSchema)
+
 // ค่าตั้งระบบ (ข้อความในแบบฟอร์มยืนยันโครงงาน) มีเอกสารเดียว
 const settingsSchema = new Schema({
   key: { type: String, default: 'main', unique: true },

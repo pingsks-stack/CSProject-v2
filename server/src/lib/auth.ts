@@ -17,8 +17,8 @@ declare global {
 }
 
 // ล็อกอินสำเร็จ: เก็บ token ในคุกกี้ httpOnly (JavaScript ในหน้าเว็บอ่านไม่ได้)
-export function setSession(res: Response, userId: string) {
-  const token = jwt.sign({ sub: userId }, config.jwtSecret, { expiresIn: Math.floor(MAX_AGE_MS / 1000) })
+export function setSession(res: Response, user: { id: string; sessionVersion?: number | null }) {
+  const token = jwt.sign({ sub: user.id, v: user.sessionVersion ?? 0 }, config.jwtSecret, { expiresIn: Math.floor(MAX_AGE_MS / 1000) })
   res.cookie(COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
@@ -37,8 +37,9 @@ export async function loadUser(req: Request, _res: Response, next: NextFunction)
   const token = req.cookies?.[COOKIE]
   if (token) {
     try {
-      const payload = jwt.verify(token, config.jwtSecret) as { sub: string }
-      req.user = (await User.findById(payload.sub)) ?? undefined
+      const payload = jwt.verify(token, config.jwtSecret) as { sub: string; v?: number }
+      const user = await User.findById(payload.sub)
+      req.user = user && (payload.v ?? 0) === (user.sessionVersion ?? 0) ? user : undefined
     } catch {
       req.user = undefined
     }
@@ -57,6 +58,11 @@ export function requireRole(...roles: Role[]) {
     if (!roles.includes(req.user.role as Role)) throw forbidden()
     next()
   }
+}
+
+// เปลี่ยนรหัสผ่านแล้ว: token ล็อกอินเดิมทุกเครื่องใช้ไม่ได้
+export function revokeSessions(user: UserDoc) {
+  user.sessionVersion = (user.sessionVersion ?? 0) + 1
 }
 
 // ใช้ใน handler ที่ผ่าน requireAuth แล้ว

@@ -1,6 +1,7 @@
 import { createApp } from './app.js'
 import { config } from './config.js'
 import { connectDb, disconnectDb } from './db.js'
+import { startReminderSchedule } from './lib/reminders.js'
 import { User } from './models/User.js'
 import { seedDemo } from './seed.js'
 
@@ -14,6 +15,7 @@ if (!config.isProd && (await User.estimatedDocumentCount()) === 0) {
 const server = createApp().listen(config.port, () => {
   console.log(`[server] พร้อมใช้งานที่ http://localhost:${config.port}`)
 })
+startReminderSchedule()
 
 async function shutdown() {
   server.close()

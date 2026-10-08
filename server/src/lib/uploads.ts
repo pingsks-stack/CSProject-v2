@@ -12,7 +12,9 @@ const ALLOWED = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.tx
 export const allowedExtensions = ALLOWED
 
 // ไฟล์เก็บที่ uploads/<kind>/<projectId>/<สุ่ม>.<นามสกุล> ไม่เปิดให้ดาวน์โหลดตรง
-export function storageDir(kind: 'submissions' | 'files', projectId: string) {
+type Kind = 'submissions' | 'files' | 'images'
+
+export function storageDir(kind: Kind, projectId: string) {
   const dir = path.join(config.uploadDir, kind, projectId)
   fs.mkdirSync(dir, { recursive: true })
   return dir
@@ -32,6 +34,34 @@ export function uploader(kind: 'submissions' | 'files', maxFiles = 1) {
   })
 }
 
+// ภาพหน้าจอโครงงาน: jpg/png/webp ไม่เกิน 5 MB
+const IMAGE_EXT = ['.jpg', '.jpeg', '.png', '.webp']
+export function imageUploader() {
+  return multer({
+    storage: multer.diskStorage({
+      destination: (req, _file, cb) => cb(null, storageDir('images', String(req.params.id))),
+      filename: (_req, file, cb) => cb(null, crypto.randomUUID() + path.extname(file.originalname).toLowerCase()),
+    }),
+    limits: { fileSize: 5 * 1024 * 1024, files: 6 },
+    fileFilter: (_req, file, cb) => {
+      if (IMAGE_EXT.includes(path.extname(file.originalname).toLowerCase())) cb(null, true)
+      else cb(badRequest('รองรับเฉพาะรูปภาพ .jpg .png .webp'))
+    },
+  })
+}
+
+// ส่งรูปภาพให้เบราว์เซอร์แสดง (ไม่ใช่ดาวน์โหลด)
+export function sendImage(res: Response, projectId: string, storedName: string, cacheSeconds = 3600) {
+  const file = path.join(config.uploadDir, 'images', projectId, path.basename(storedName))
+  if (!fs.existsSync(file)) {
+    res.status(404).json({ error: 'ไม่พบรูปภาพ' })
+    return
+  }
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('Cache-Control', `private, max-age=${cacheSeconds}`)
+  res.sendFile(file)
+}
+
 // busboy อ่านชื่อไฟล์เป็น latin1 ถ้าชื่อยังไม่มีอักขระเกิน 0xFF แปลว่ายังไม่ได้ถอดรหัส UTF-8
 export function originalName(file: Express.Multer.File) {
   const name = file.originalname
@@ -39,12 +69,12 @@ export function originalName(file: Express.Multer.File) {
   return path.basename(decoded).slice(0, 255)
 }
 
-export function removeStored(kind: 'submissions' | 'files', projectId: string, storedName: string) {
+export function removeStored(kind: Kind, projectId: string, storedName: string) {
   fs.rm(path.join(config.uploadDir, kind, projectId, path.basename(storedName)), { force: true }, () => {})
 }
 
 // inline=true เปิดอ่านในเบราว์เซอร์ได้เฉพาะ PDF (ไฟล์ชนิดอื่นดาวน์โหลดเสมอ)
-export function sendStored(res: Response, kind: 'submissions' | 'files', projectId: string, storedName: string, downloadName: string, inline = false) {
+export function sendStored(res: Response, kind: Kind, projectId: string, storedName: string, downloadName: string, inline = false) {
   const file = path.join(config.uploadDir, kind, projectId, path.basename(storedName))
   if (!fs.existsSync(file)) {
     res.status(404).json({ error: 'ไม่พบไฟล์' })

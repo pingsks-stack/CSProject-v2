@@ -51,6 +51,26 @@ const githubSchema = new Schema(
   { _id: false },
 )
 
+// ภาพหน้าจอ (ประกาศ schema แยกเพื่อให้แต่ละรูปมี _id ไว้อ้างถึง)
+const showcaseImageSchema = new Schema({
+  fileName: String,
+  storedName: String,
+  size: Number,
+  uploadedAt: { type: Date, default: Date.now },
+})
+
+// ข้อมูลแนะนำโครงงานสำหรับคลังโครงงาน (นิสิตกรอกเอง) ภาพแรกเป็นภาพปก
+const showcaseSchema = new Schema(
+  {
+    abstract: { type: String, default: '' },
+    keywords: { type: [String], default: [] },
+    demoUrl: { type: String, default: '' },
+    videoUrl: { type: String, default: '' },
+    images: { type: [showcaseImageSchema], default: [] },
+  },
+  { _id: false },
+)
+
 const projectSchema = new Schema(
   {
     nameTh: { type: String, required: true, trim: true },
@@ -67,6 +87,7 @@ const projectSchema = new Schema(
     passedAt: { type: Date, default: null },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     github: { type: githubSchema, default: null },
+    showcase: { type: showcaseSchema, default: () => ({}) },
   },
   { timestamps: true },
 )

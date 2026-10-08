@@ -1,9 +1,11 @@
-import 'dotenv/config'
 import path from 'node:path'
+import dotenv from 'dotenv'
 import { fileURLToPath } from 'node:url'
 
 // โฟลเดอร์ server/ (ใช้อ้างที่เก็บไฟล์อัปโหลดและข้อมูล MongoDB ตอนพัฒนา)
 export const serverRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+
+dotenv.config({ quiet: true })
 
 const isProd = process.env.NODE_ENV === 'production'
 
@@ -25,4 +27,20 @@ export const config = {
   // ไม่บังคับ: token ของ GitHub (เพิ่มโควตาการเรียก API) และรหัสลับของ webhook (ให้ GitHub แจ้งทันทีที่ push)
   githubToken: process.env.GITHUB_TOKEN?.trim() || '',
   githubWebhookSecret: process.env.GITHUB_WEBHOOK_SECRET?.trim() || '',
+  // ที่อยู่เว็บที่ผู้ใช้เปิด (ใช้ทำลิงก์ในอีเมล) เช่น https://csproject.up.ac.th
+  appUrl: (process.env.APP_URL?.trim() || (isProd ? '' : 'http://localhost:5173')).replace(/\/+$/, ''),
+  // ส่งอีเมลผ่าน SMTP (ไม่ตั้ง SMTP_HOST = เครื่องพัฒนาเก็บอีเมลเป็นไฟล์ใน server/data/mail, เซิร์ฟเวอร์จริงไม่ส่งอีเมล)
+  smtp: {
+    host: process.env.SMTP_HOST?.trim() || '',
+    port: Number(process.env.SMTP_PORT ?? 587),
+    secure: process.env.SMTP_SECURE === 'true',
+    user: process.env.SMTP_USER?.trim() || '',
+    pass: process.env.SMTP_PASS ?? '',
+    from: process.env.MAIL_FROM?.trim() || 'CS Project <no-reply@localhost>',
+  },
+  devMailDir: path.resolve(serverRoot, 'data', 'mail'),
+  backupDir: path.resolve(serverRoot, '..', process.env.BACKUP_DIR ?? 'backups'),
+  backupKeep: Number(process.env.BACKUP_KEEP ?? 14),
+  // เตือนกำหนดส่งอัตโนมัติ (ปิดได้ด้วย REMINDERS=off)
+  reminders: process.env.REMINDERS !== 'off',
 }

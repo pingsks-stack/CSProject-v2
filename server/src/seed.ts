@@ -6,6 +6,7 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
+import zlib from 'node:zlib'
 import mongoose, { type Types } from 'mongoose'
 import { config } from './config.js'
 import { hashPassword } from './lib/password.js'
@@ -41,7 +42,33 @@ function tinyPdf(text: string) {
   return Buffer.from(out, 'latin1')
 }
 
-function storeFile(kind: 'files' | 'submissions', projectId: Types.ObjectId, ext: string, data: Buffer) {
+// ภาพปก PNG ไล่สีแนวทแยง (ใช้แทนภาพหน้าจอจริงในข้อมูลตัวอย่าง)
+function gradientPng(w: number, h: number, from: [number, number, number], to: [number, number, number]) {
+  const raw = Buffer.alloc((w * 3 + 1) * h)
+  for (let y = 0; y < h; y++) {
+    raw[y * (w * 3 + 1)] = 0
+    for (let x = 0; x < w; x++) {
+      const t = (x / w + y / h) / 2
+      const o = y * (w * 3 + 1) + 1 + x * 3
+      for (let c = 0; c < 3; c++) raw[o + c] = Math.round(from[c] + (to[c] - from[c]) * t)
+    }
+  }
+  const chunk = (type: string, data: Buffer) => {
+    const len = Buffer.alloc(4)
+    len.writeUInt32BE(data.length)
+    const td = Buffer.concat([Buffer.from(type, 'latin1'), data])
+    const crc = Buffer.alloc(4)
+    crc.writeUInt32BE(zlib.crc32(td))
+    return Buffer.concat([len, td, crc])
+  }
+  const ihdr = Buffer.alloc(13)
+  ihdr.writeUInt32BE(w, 0)
+  ihdr.writeUInt32BE(h, 4)
+  ihdr.set([8, 2, 0, 0, 0], 8)
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))])
+}
+
+function storeFile(kind: 'files' | 'submissions' | 'images', projectId: Types.ObjectId, ext: string, data: Buffer) {
   const name = crypto.randomUUID() + ext
   fs.writeFileSync(path.join(storageDir(kind, String(projectId)), name), data)
   return { storedName: name, size: data.length }
@@ -151,6 +178,14 @@ export async function seedDemo() {
   for (const [i, chapter] of (['บทที่ 1', 'บทที่ 2', 'บทที่ 3', 'บทที่ 4', 'บทที่ 5', 'เล่มสมบูรณ์'] as Chapter[]).entries()) {
     await sub(p2._id, chapter, 1, i % 2 ? s4._id : s3._id, 180 - i * 25, [{ reviewer: t2._id, verdict: 'pass', comment: '' }])
   }
+  p2.set('showcase', {
+    abstract: 'แอปพลิเคชันบนมือถือสำหรับจองห้องประชุมภายในคณะ ผู้ใช้ดูตารางว่างของแต่ละห้องแบบเรียลไทม์ จองล่วงหน้า และรับการแจ้งเตือนก่อนเวลาประชุม ระบบตรวจการจองซ้อนเวลาอัตโนมัติ และมีหน้าสรุปสถิติการใช้ห้องสำหรับเจ้าหน้าที่ พัฒนาด้วย Flutter และ Firebase',
+    keywords: ['Flutter', 'Firebase', 'ระบบจอง', 'Mobile'],
+    demoUrl: '',
+    videoUrl: '',
+    images: [{ fileName: 'หน้าจอหลัก.png', ...storeFile('images', p2._id, '.png', gradientPng(960, 540, [91, 44, 140], [191, 141, 10])) }],
+  })
+  await p2.save()
   const f2 = storeFile('files', p2._id, '.pdf', tinyPdf('Final report'))
   await ProjectFile.create({ project: p2._id, fileName: 'รายงานฉบับสมบูรณ์.pdf', ...f2, uploadedBy: s3._id })
 
@@ -174,6 +209,14 @@ export async function seedDemo() {
   })
 
   await sub(p3._id, 'เล่มสมบูรณ์', 1, s5._id, 35, [{ reviewer: t3._id, verdict: 'pass', comment: 'เรียบร้อย' }])
+  p3.set('showcase', {
+    abstract: 'เกมฝึกบวกลบเลขสำหรับนักเรียนประถมศึกษา ปรับระดับความยากตามผลการเล่น มีระบบสะสมดาวและกระดานคะแนนในห้องเรียน ครูดูรายงานความก้าวหน้าของนักเรียนแต่ละคนได้ พัฒนาด้วย Unity (C#)',
+    keywords: ['Unity', 'C#', 'Educational Game'],
+    demoUrl: '',
+    videoUrl: '',
+    images: [{ fileName: 'หน้าเกม.png', ...storeFile('images', p3._id, '.png', gradientPng(960, 540, [37, 99, 235], [27, 175, 122])) }],
+  })
+  await p3.save()
 
   // 4) โครงงานที่ไม่ผ่าน (ส่งใหม่ได้)
   const p4 = await Project.create({
