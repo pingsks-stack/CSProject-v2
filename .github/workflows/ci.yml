@@ -67,10 +67,17 @@ jobs:
         if: steps.cf.outputs.ready == 'true'
         run: |
           api() { curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4$1"; }
-          status=$(api /user/tokens/verify | jq -r '.result.status // "invalid"')
-          echo "token status: $status"
+          # token ส่วนตัว (My Profile) ตรวจที่ /user/tokens/verify, token ของบัญชี (Manage Account) ตรวจที่ /accounts/<id>/tokens/verify
+          user=$(api /user/tokens/verify)
+          acct=$(api "/accounts/$CLOUDFLARE_ACCOUNT_ID/tokens/verify")
+          status=$(echo "$user" | jq -r '.result.status // empty')
+          [ -z "$status" ] && status=$(echo "$acct" | jq -r '.result.status // empty')
+          echo "token status: ${status:-invalid}"
           if [ "$status" != "active" ]; then
-            echo "::error::CLOUDFLARE_API_TOKEN ใช้ไม่ได้ (สถานะ: $status) — สร้าง token ใหม่จากแม่แบบ Edit Cloudflare Workers แล้วอัปเดต secret"
+            echo "user verify: $(echo "$user" | jq -c '[.errors[]?.message]')"
+            echo "account verify: $(echo "$acct" | jq -c '[.errors[]?.message]')"
+            echo "token length: ${#CLOUDFLARE_API_TOKEN}"
+            echo "::error::CLOUDFLARE_API_TOKEN ใช้ไม่ได้ — สร้าง token ใหม่จากแม่แบบ Edit Cloudflare Workers แล้ววางเฉพาะค่า token (บรรทัดเดียว) ใน secret"
             exit 1
           fi
           if ! api "/accounts/$CLOUDFLARE_ACCOUNT_ID" | jq -e '.success' > /dev/null; then
