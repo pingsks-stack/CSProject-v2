@@ -1,4 +1,4 @@
-# image สำหรับเดโม (Cloudflare Containers หรือ Docker ทั่วไป)
+# image สำหรับเดโม (Render, Cloudflare Containers หรือ Docker ทั่วไป)
 # รวมหน้าเว็บ + API + MongoDB ชั่วคราวไว้ด้วยกัน ข้อมูลตัวอย่างถูกใส่ใหม่ทุกครั้งที่ container เริ่ม
 # ใช้งานจริงกับข้อมูลจริงให้ติดตั้งตาม docs/INSTALL.md แทน
 

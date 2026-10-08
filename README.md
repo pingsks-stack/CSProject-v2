@@ -10,7 +10,7 @@
 | ฐานข้อมูล | MongoDB |
 
 > เวอร์ชัน 2 (repo นี้) เขียนใหม่ทั้งหมดแทนระบบเดิม (ASP.NET Web Forms) ซึ่งอยู่ใน repo [CSProject](https://github.com/pingsks-stack/CSProject)
-> วิธีติดตั้งบนเซิร์ฟเวอร์ดูที่ [docs/INSTALL.md](docs/INSTALL.md) · เปิดเป็นเดโมบน Cloudflare ดูที่ [docs/DEMO.md](docs/DEMO.md)
+> วิธีติดตั้งบนเซิร์ฟเวอร์ดูที่ [docs/INSTALL.md](docs/INSTALL.md) · เปิดเป็นเดโม (Render ฟรี / Cloudflare) ดูที่ [docs/DEMO.md](docs/DEMO.md)
 
 ## โครงสร้างโฟลเดอร์
 
@@ -31,10 +31,11 @@ CSProject/
 │  ├─ test/                ชุดทดสอบ API (npm test)
 │  ├─ uploads/             ไฟล์ที่ผู้ใช้อัปโหลด (ไม่เก็บใน git)
 │  └─ data/                MongoDB ของเครื่องพัฒนา (ไม่เก็บใน git)
-├─ docs/                   คู่มือติดตั้ง (INSTALL.md) และเดโมบน Cloudflare (DEMO.md)
+├─ docs/                   คู่มือติดตั้ง (INSTALL.md) และการเปิดเป็นเดโม (DEMO.md)
 ├─ deploy/cloudflare/      Worker สำหรับเดโมบน Cloudflare Containers
 ├─ Dockerfile              image เดโม (หน้าเว็บ + API + MongoDB ชั่วคราว)
-├─ .github/workflows/      GitHub Actions (typecheck, build, test ทุกครั้งที่ push)
+├─ render.yaml             ตั้งค่าเดโมฟรีบน Render
+├─ .github/workflows/      GitHub Actions (typecheck, build, test, ทดสอบ image เดโม ทุกครั้งที่ push)
 └─ package.json            สั่งรัน client + server พร้อมกัน
 ```
 

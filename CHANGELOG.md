@@ -24,7 +24,7 @@
 - สคริปต์ดูแลระบบ: `create-admin`, `backup`, `restore`
 - ชุดทดสอบอัตโนมัติ (`npm test`) และ GitHub Actions
 - คู่มือติดตั้ง [docs/INSTALL.md](docs/INSTALL.md)
-- เดโมบน Cloudflare Containers (`DEMO_MODE`, `Dockerfile`, deploy อัตโนมัติจาก GitHub Actions) — [docs/DEMO.md](docs/DEMO.md)
+- เปิดเป็นเดโม (`DEMO_MODE`, `Dockerfile`): ฟรีบน Render (`render.yaml`) หรือ Cloudflare Containers (deploy จาก GitHub Actions) — [docs/DEMO.md](docs/DEMO.md)
 
 ### ต้องทำเมื่ออัปเดต
 - ติดตั้งใหม่ทั้งหมดตามคู่มือติดตั้ง (ไม่ได้ย้ายข้อมูลจากระบบเดิม)
