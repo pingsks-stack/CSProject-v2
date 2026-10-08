@@ -305,8 +305,13 @@ adminRouter.get('/export/submissions.csv', async (req, res) => {
 })
 
 adminRouter.get('/export/users.csv', async (req, res) => {
-  const { role } = parse(z.object({ role: z.enum(ROLES).optional() }), req.query)
-  const users = await User.find(role ? { role } : {}).sort({ role: -1, name: 1 })
+  const { role, q } = parse(z.object({ role: z.enum(ROLES).optional(), q: z.string().optional() }), req.query)
+  const filter: Record<string, unknown> = role ? { role } : {}
+  if (q?.trim()) {
+    const re = containsRe(q)
+    filter.$or = [{ name: re }, { username: re }, { email: re }, { studentId: re }]
+  }
+  const users = await User.find(filter).sort({ role: -1, name: 1 })
   const ROLE_TH: Record<string, string> = { student: 'นิสิต', teacher: 'อาจารย์', admin: 'ผู้ดูแลระบบ' }
   const rows = users.map((u, i) => [i + 1, u.name, u.username, u.email, ROLE_TH[u.role] ?? u.role, u.studentId, u.mobile, csvDate(u.createdAt)])
   sendCsv(res, `ผู้ใช้งาน-${stamp()}.csv`, toCsv(['ลำดับ', 'ชื่อ-นามสกุล', 'ชื่อผู้ใช้', 'อีเมล', 'บทบาท', 'รหัสนิสิต', 'เบอร์โทร', 'วันที่สร้างบัญชี'], rows))

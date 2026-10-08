@@ -32,6 +32,8 @@ const AdminDeadlines = lazy(() => import('./pages/admin/Deadlines'))
 const AdminTypes = lazy(() => import('./pages/admin/Types'))
 const AdminSettings = lazy(() => import('./pages/admin/Settings'))
 const NotFound = lazy(() => import('./pages/NotFound'))
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
+const ResetPassword = lazy(() => import('./pages/ResetPassword'))
 const Showcase = lazy(() => import('./pages/showcase/Showcase'))
 const ShowcaseProject = lazy(() => import('./pages/showcase/ShowcaseProject'))
 const Reader = lazy(() => import('./pages/showcase/Reader'))
@@ -63,6 +65,8 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
         <Route path="/register" element={<PublicOnly><Register /></PublicOnly>} />
+        <Route path="/forgot-password" element={<PublicOnly><ForgotPassword /></PublicOnly>} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         {/* คลังโครงงานสาธารณะ เปิดได้โดยไม่ต้องล็อกอิน (ตัวอ่านไฟล์ตรวจการล็อกอินเอง) */}
         <Route path="/showcase" element={<Showcase />} />
         <Route path="/showcase/:id" element={<ShowcaseProject />} />

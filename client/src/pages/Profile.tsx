@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { FolderKanban, KeyRound, MessagesSquare, Save, type LucideIcon } from 'lucide-react'
+import { FolderKanban, KeyRound, Mail, MessagesSquare, Save, type LucideIcon } from 'lucide-react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router'
 import { Async, Avatar, Badge, Panel, PageHeader, Spinner, useAction } from '../components/ui'
@@ -17,7 +17,7 @@ interface ProfileData {
 export default function Profile() {
   const { refresh } = useAuth()
   const q = useQuery({ queryKey: ['profile'], queryFn: () => api.get<ProfileData>('/auth/profile') })
-  const save = useAction((body: { name: string; mobile: string }) => api.put('/auth/profile', body), {
+  const save = useAction((body: { name: string; mobile: string; emailNotifications: boolean }) => api.put('/auth/profile', body), {
     success: 'บันทึกข้อมูลแล้ว',
     invalidate: [['profile']],
     onSuccess: () => refresh(),
@@ -26,7 +26,11 @@ export default function Profile() {
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
-    save.mutate({ name: String(fd.get('name') ?? '').trim(), mobile: String(fd.get('mobile') ?? '').trim() })
+    save.mutate({
+      name: String(fd.get('name') ?? '').trim(),
+      mobile: String(fd.get('mobile') ?? '').trim(),
+      emailNotifications: fd.get('emailNotifications') === 'on',
+    })
   }
 
   return (
@@ -48,7 +52,7 @@ export default function Profile() {
             </section>
 
             <Panel title="แก้ไขข้อมูลส่วนตัว" sub="ชื่อผู้ใช้ อีเมล และรหัสนิสิต แก้ไขได้โดยผู้ดูแลระบบเท่านั้น">
-              <form key={`${user.name}|${user.mobile}`} onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2">
+              <form key={`${user.name}|${user.mobile}|${user.emailNotifications}`} onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2">
                 <label className="field sm:col-span-2">
                   <span>ชื่อ-นามสกุล</span>
                   <input name="name" className="input" required maxLength={100} defaultValue={user.name} autoComplete="name" />
@@ -70,6 +74,13 @@ export default function Profile() {
                 <ReadOnly label="ชื่อผู้ใช้" value={user.username} />
                 <ReadOnly label="อีเมล" value={user.email} />
                 {user.studentId && <ReadOnly label="รหัสนิสิต" value={user.studentId} />}
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line px-4 py-3 sm:col-span-2">
+                  <input type="checkbox" name="emailNotifications" defaultChecked={user.emailNotifications} className="mt-1 size-4 accent-[rgb(var(--c-accent))]" />
+                  <span className="text-sm">
+                    <span className="flex items-center gap-1.5 font-medium text-ink"><Mail className="size-4" /> รับการแจ้งเตือนทางอีเมล</span>
+                    <span className="block text-muted">คำเชิญ ผลการอนุมัติคำขอ ผลตรวจเอกสาร และการเตือนกำหนดส่ง จะส่งไปที่ {user.email} ด้วย (การแจ้งเตือนในระบบยังแสดงตามปกติ)</span>
+                  </span>
+                </label>
                 <div className="flex justify-end sm:col-span-2">
                   <button className="btn btn-primary" disabled={save.isPending}>
                     {save.isPending ? <Spinner className="text-accent-ink" /> : <Save />} บันทึกข้อมูล

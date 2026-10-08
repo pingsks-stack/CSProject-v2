@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, BookOpen, Check, CodeXml, Copy, Download, Eye, FileText, GitBranch, Lock, Share2, Users } from 'lucide-react'
+import { ArrowLeft, BookOpen, Check, CodeXml, Copy, Download, Eye, FileText, GitBranch, Info, Lock, Share2, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { GithubSummary } from '../../components/github'
 import { PublicLayout } from '../../components/PublicLayout'
+import { ShowcaseDetails, hasShowcase } from '../../components/ShowcaseEditor'
 import { Async, Avatar, Badge, Empty, Panel, cx } from '../../components/ui'
-import { api } from '../../lib/api'
+import { api, qs } from '../../lib/api'
 import { fileSize, languageLabel, thaiDate, thaiDateLong } from '../../lib/format'
 import type { PublicDetail } from '../../lib/types'
 
@@ -47,6 +48,15 @@ function Detail({ d }: { d: PublicDetail }) {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="flex min-w-0 flex-col gap-6 lg:col-span-2">
+          {hasShowcase(d.showcase) && (
+            <Panel title={<span className="inline-flex items-center gap-2"><Info className="size-4" /> เกี่ยวกับโครงงาน</span>}>
+              <ShowcaseDetails
+                showcase={d.showcase}
+                imageUrl={(imageId) => `/api/public/projects/${p.id}/images/${imageId}`}
+                keywordHref={(k) => `/showcase${qs({ q: k })}`}
+              />
+            </Panel>
+          )}
           <BookPanel d={d} book={book} />
           {d.chapters.some((c) => c.chapter !== 'เล่มสมบูรณ์') && <ChaptersPanel d={d} />}
           {d.github && (

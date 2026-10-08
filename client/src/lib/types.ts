@@ -13,6 +13,7 @@ export interface User {
   mobile: string
   studentId: string
   role: Role
+  emailNotifications: boolean
 }
 
 export interface UserRef {
@@ -58,6 +59,23 @@ export interface GithubInfo {
   readmeHtml?: string
 }
 
+// ข้อมูลแนะนำโครงงานสำหรับคลังโครงงาน (ภาพแรกเป็นภาพปก)
+// ภาพ: สมาชิก/ผู้ล็อกอิน /api/projects/:id/showcase/images/:imageId, สาธารณะ (โครงงานผ่านแล้ว) /api/public/projects/:id/images/:imageId
+export interface Showcase {
+  abstract: string
+  keywords: string[]
+  demoUrl: string
+  videoUrl: string
+  images: { id: string; fileName: string }[]
+}
+
+// ผลลัพธ์แบบแบ่งหน้า (page เริ่มที่ 1)
+export interface PageInfo {
+  total: number
+  page: number
+  pageSize: number
+}
+
 export interface Project {
   id: string
   nameTh: string
@@ -72,6 +90,7 @@ export interface Project {
   createdAt: string
   members: Member[]
   github: GithubInfo | null
+  showcase: Showcase
   fileCount?: number
   codeCount?: number
   chapterCount?: number
@@ -238,10 +257,14 @@ export interface PublicProject {
   github: { owner: string; repo: string; htmlUrl: string; description: string; stars: number; languages: string[] } | null
   codeCount?: number
   hasBook?: boolean
+  abstract: string
+  keywords: string[]
+  coverImage: string | null
 }
 
 export interface PublicDetail {
   project: PublicProject
+  showcase: Showcase
   github: GithubInfo | null
   chapters: { id: string; chapter: string; version: number; fileName: string; size: number; createdAt: string; isPdf: boolean }[]
   files: { id: string; fileName: string; size: number; isPdf: boolean }[]

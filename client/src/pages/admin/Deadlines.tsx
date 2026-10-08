@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
-import { CalendarClock, CalendarPlus, Pencil, RotateCcw, Save, Trash2 } from 'lucide-react'
+import { CalendarClock, CalendarPlus, FileSpreadsheet, Pencil, RotateCcw, Save, Trash2 } from 'lucide-react'
 import { useRef, useState, type FormEvent } from 'react'
 import { Async, Badge, Empty, PageHeader, Panel, cx, useAction, useConfirm } from '../../components/ui'
-import { api } from '../../lib/api'
+import { api, qs } from '../../lib/api'
 import { daysUntil, thaiDate } from '../../lib/format'
 import { useMeta } from '../../lib/queries'
 
@@ -43,7 +43,10 @@ export default function AdminDeadlines() {
   const q = useQuery({ queryKey: ['admin', 'deadlines'], queryFn: () => api.get<DeadlinesRes>('/admin/deadlines') })
   return (
     <>
-      <PageHeader title="กำหนดส่งงาน" subtitle="กำหนดวันส่งเอกสารแต่ละบทตามปีการศึกษา ระบบจะแสดงงานที่เลยกำหนดบนแดชบอร์ด" />
+      <PageHeader
+        title="กำหนดส่งงาน"
+        subtitle="กำหนดวันส่งเอกสารแต่ละบทตามปีการศึกษา ระบบจะแสดงงานที่เลยกำหนดบนแดชบอร์ด และส่งออกสถานะการส่งงานของแต่ละปีการศึกษาเป็นไฟล์ Excel ได้ (CSV รองรับภาษาไทย)"
+      />
       <Async q={q}>{(data) => <DeadlinesBody data={data} />}</Async>
     </>
   )
@@ -150,6 +153,15 @@ function DeadlinesBody({ data }: { data: DeadlinesRes }) {
                 </span>
               }
               sub={`${rows.length} กำหนดส่ง · ${rows[0].projects} โครงงานในปีการศึกษานี้`}
+              actions={
+                <a
+                  href={`/api/admin/export/submissions.csv${qs({ term })}`}
+                  className="btn btn-ghost btn-sm"
+                  title={`ดาวน์โหลดสถานะการส่งเอกสารทุกบทของทุกโครงงานปีการศึกษา ${term} เป็นไฟล์ CSV เปิดด้วย Excel ได้ (รองรับภาษาไทย)`}
+                >
+                  <FileSpreadsheet /> ส่งออกสถานะการส่งงาน
+                </a>
+              }
               bodyClass="overflow-x-auto"
             >
               <table className="table min-w-[640px]">

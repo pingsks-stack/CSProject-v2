@@ -2,11 +2,12 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { Eye, SearchX, X } from 'lucide-react'
 import { Link } from 'react-router'
 import { SearchBox, advisorName, studentNames, useUrlFilters } from '../components/filters'
-import { Async, Badge, Empty, PageHeader, Panel, Spinner, StatusBadge } from '../components/ui'
+import { Pagination, scrollToTop, toPage } from '../components/Pagination'
+import { Async, Badge, Empty, PageHeader, Panel, Spinner, StatusBadge, cx } from '../components/ui'
 import { api, qs } from '../lib/api'
 import { useMe } from '../lib/auth'
 import { useMeta } from '../lib/queries'
-import type { Project } from '../lib/types'
+import type { PageInfo, Project } from '../lib/types'
 
 // ===================== หน้า "ค้นหาโครงงาน" (แทน Search_Doc.aspx) =====================
 
@@ -16,18 +17,23 @@ const STATUS = [
   { value: 'pending', label: 'รอพิจารณา' },
   { value: 'failed', label: 'ไม่ผ่าน' },
 ]
-const LIMIT = 300
+const PAGE_SIZE = 25
 
 export default function Search() {
   const me = useMe()
   const meta = useMeta()
-  const [f, setF] = useUrlFilters(['q', 'type', 'status'] as const)
+  const [f, setF] = useUrlFilters(['q', 'type', 'status', 'page'] as const)
+  const page = toPage(f.page)
   const res = useQuery({
-    queryKey: ['projects', 'search', f],
-    queryFn: () => api.get<{ projects: Project[] }>(`/projects${qs({ scope: 'search', ...f })}`),
+    queryKey: ['projects', 'search', { ...f, page }],
+    queryFn: () => api.get<{ projects: Project[] } & PageInfo>(`/projects${qs({ scope: 'search', ...f, page, pageSize: PAGE_SIZE })}`),
     placeholderData: keepPreviousData,
   })
   const filtered = !!(f.q || f.type || f.status)
+  const goPage = (p: number) => {
+    setF({ page: p > 1 ? String(p) : '' })
+    scrollToTop()
+  }
 
   return (
     <>
@@ -64,20 +70,22 @@ export default function Search() {
       </div>
 
       <Async q={res}>
-        {({ projects }) => (
+        {({ projects, total, pageSize }) => (
           <Panel
-            title={`พบ ${projects.length.toLocaleString('th-TH')} โครงงาน`}
-            sub={projects.length >= LIMIT ? `แสดง ${LIMIT} รายการล่าสุด ระบุคำค้นให้แคบลงเพื่อดูโครงงานอื่น` : undefined}
+            title={`พบ ${total.toLocaleString('th-TH')} โครงงาน`}
             actions={res.isFetching && <Spinner />}
-            bodyClass="overflow-x-auto"
+            bodyClass=""
           >
-            {projects.length === 0 ? (
+            {total === 0 ? (
               <Empty icon={SearchX} title="ไม่พบโครงงานที่ตรงกับเงื่อนไข">
                 {filtered ? 'ลองเปลี่ยนคำค้น หรือล้างตัวกรองแล้วค้นหาใหม่' : 'ยังไม่มีโครงงานที่คุณค้นหาได้'}
               </Empty>
             ) : (
-              <ResultTable projects={projects} myId={me.id} />
+              <div className={cx('overflow-x-auto transition-opacity', res.isPlaceholderData && 'opacity-60')}>
+                <ResultTable projects={projects} myId={me.id} />
+              </div>
             )}
+            <Pagination className="border-t border-line px-5 py-3" page={page} pageSize={pageSize} total={total} onChange={goPage} />
           </Panel>
         )}
       </Async>

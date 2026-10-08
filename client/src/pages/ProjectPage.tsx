@@ -8,6 +8,7 @@ import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { GithubPanel } from '../components/github'
 import { Icon } from '../components/Icon'
+import { ShowcasePanel } from '../components/ShowcaseEditor'
 import { UserPicker, type PickedUser } from '../components/UserPicker'
 import { Async, Avatar, Badge, Empty, Modal, PageHeader, Panel, StatusBadge, TONE, cx, useAction, useConfirm } from '../components/ui'
 import { api } from '../lib/api'
@@ -30,7 +31,7 @@ export default function ProjectPage() {
 const ROW_ACTIONS = 'flex w-full flex-wrap items-center gap-2 pl-12 sm:w-auto sm:pl-0'
 
 const invalidateAll = (id: string) => [
-  ...projectKeys(id), ['files', id], ['codes', id], ['project-requests', id], ['activity', id], ['chapters', id], ['meta'], ['chat', 'contacts'],
+  ...projectKeys(id), ['files', id], ['codes', id], ['project-requests', id], ['activity', id], ['chapters', id], ['meta'], ['chat', 'contacts'], ['public'],
 ]
 
 function ProjectView({ p, v }: { p: Project; v: Viewer }) {
@@ -116,6 +117,7 @@ function ProjectView({ p, v }: { p: Project; v: Viewer }) {
         <div className="flex min-w-0 flex-col gap-6 xl:col-span-2">
           <StudentsPanel p={p} v={v} pending={pending} />
           <TeachersPanel p={p} v={v} pending={pending} />
+          <ShowcasePanel project={p} canEdit={v.canEdit} />
           <FilesPanel p={p} v={v} />
           <GithubPanel projectId={p.id} canEdit={v.canEdit} canSync={v.isMember || v.isAdmin} />
           <CodePanel p={p} v={v} />

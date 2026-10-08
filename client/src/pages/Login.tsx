@@ -55,7 +55,10 @@ export default function Login() {
           <input name="username" className="input" autoComplete="username" required autoFocus />
         </label>
         <label className="field">
-          <span>รหัสผ่าน</span>
+          <span className="flex items-center justify-between gap-2">
+            รหัสผ่าน
+            <Link to="/forgot-password" className="text-xs font-normal">ลืมรหัสผ่าน?</Link>
+          </span>
           <input name="password" type="password" className="input" autoComplete="current-password" required />
         </label>
         {error && <p className="rounded-xl bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}

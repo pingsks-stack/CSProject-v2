@@ -1,24 +1,32 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { CodeXml, FileText, Globe, GraduationCap, Library as LibraryIcon, SearchX, Users, X } from 'lucide-react'
 import { Link } from 'react-router'
-import { Async, Badge, Empty, PageHeader, Spinner } from '../components/ui'
+import { Async, Badge, Empty, PageHeader, Spinner, cx } from '../components/ui'
 import { api, qs } from '../lib/api'
 import { useMeta } from '../lib/queries'
-import type { Project } from '../lib/types'
+import type { PageInfo, Project } from '../lib/types'
 import { SearchBox, advisorName, studentNames, useUrlFilters } from '../components/filters'
+import { Pagination, scrollToTop, toPage } from '../components/Pagination'
 
 const CLASS_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8]
+// การ์ดเรียง 2–3 คอลัมน์ 24 ใบจึงเต็มแถวพอดี
+const PAGE_SIZE = 24
 
 // หน้า "คลังโครงงาน" โครงงานที่ผ่านครบ 3/3 (แทน Doc_All.aspx)
 export default function Library() {
   const meta = useMeta()
-  const [f, setF] = useUrlFilters(['q', 'type', 'term', 'classLevel'] as const)
+  const [f, setF] = useUrlFilters(['q', 'type', 'term', 'classLevel', 'page'] as const)
+  const page = toPage(f.page)
   const res = useQuery({
-    queryKey: ['projects', 'library', f],
-    queryFn: () => api.get<{ projects: Project[] }>(`/projects${qs({ scope: 'library', ...f })}`),
+    queryKey: ['projects', 'library', { ...f, page }],
+    queryFn: () => api.get<{ projects: Project[] } & PageInfo>(`/projects${qs({ scope: 'library', ...f, page, pageSize: PAGE_SIZE })}`),
     placeholderData: keepPreviousData,
   })
   const filtered = !!(f.q || f.type || f.term || f.classLevel)
+  const goPage = (p: number) => {
+    setF({ page: p > 1 ? String(p) : '' })
+    scrollToTop()
+  }
 
   return (
     <>
@@ -61,8 +69,8 @@ export default function Library() {
       </div>
 
       <Async q={res}>
-        {({ projects }) =>
-          projects.length === 0 ? (
+        {({ projects, total, pageSize }) =>
+          total === 0 ? (
             <div className="panel">
               {filtered ? (
                 <Empty icon={SearchX} title="ไม่พบโครงงานที่ตรงกับเงื่อนไข">ลองเปลี่ยนคำค้น หรือล้างตัวกรองแล้วค้นหาใหม่</Empty>
@@ -73,12 +81,13 @@ export default function Library() {
           ) : (
             <>
               <div className="mb-3 flex items-center gap-2 text-sm text-muted">
-                พบ {projects.length.toLocaleString('th-TH')} โครงงาน
+                พบ {total.toLocaleString('th-TH')} โครงงาน
                 {res.isFetching && <Spinner className="size-4" />}
               </div>
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className={cx('grid gap-4 transition-opacity sm:grid-cols-2 xl:grid-cols-3', res.isPlaceholderData && 'opacity-60')}>
                 {projects.map((p) => <LibraryCard key={p.id} p={p} />)}
               </div>
+              <Pagination className="mt-6" page={page} pageSize={pageSize} total={total} onChange={goPage} />
             </>
           )
         }

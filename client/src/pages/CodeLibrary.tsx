@@ -8,28 +8,42 @@ import { api, qs } from '../lib/api'
 import { useMe } from '../lib/auth'
 import { LANGUAGES, languageLabel, thaiDate } from '../lib/format'
 import { useProject } from '../lib/queries'
-import type { CodeItem } from '../lib/types'
+import type { CodeItem, PageInfo } from '../lib/types'
 import { SearchBox, useUrlFilters } from '../components/filters'
+import { Pagination, toPage } from '../components/Pagination'
 
 // แยกบรรทัด (ไม่นับบรรทัดว่างท้ายโค้ด)
 const splitLines = (code: string) => code.replace(/\r?\n$/, '').split(/\r?\n/)
 
+const PAGE_SIZE = 50
+
 // หน้า "คลังซอร์สโค้ด" (แทน Code.aspx) แอดมินเห็นทั้งหมด คนอื่นเห็นโครงงานที่ผ่านแล้วและโครงงานของตัวเอง
 export default function CodeLibrary() {
   const me = useMe()
-  const [f, setF] = useUrlFilters(['q', 'lang', 'project', 'id'] as const)
+  const [f, setF] = useUrlFilters(['q', 'lang', 'project', 'id', 'page'] as const)
+  const page = toPage(f.page)
   const res = useQuery({
-    queryKey: ['codes', { q: f.q, lang: f.lang, project: f.project }],
-    queryFn: () => api.get<{ codes: CodeItem[] }>(`/codes${qs({ q: f.q, lang: f.lang, project: f.project })}`),
+    queryKey: ['codes', { q: f.q, lang: f.lang, project: f.project, page }],
+    queryFn: () => api.get<{ codes: CodeItem[] } & PageInfo>(`/codes${qs({ q: f.q, lang: f.lang, project: f.project, page, pageSize: PAGE_SIZE })}`),
     placeholderData: keepPreviousData,
   })
   const project = useProject(f.project || undefined)
   const all = res.data?.codes ?? []
   const selected = all.find((c) => c.id === f.id) ?? all[0]
   const viewerRef = useRef<HTMLDivElement>(null)
+  const paneRef = useRef<HTMLElement>(null)
+  const listRef = useRef<HTMLUListElement>(null)
+
+  // เปลี่ยนหน้า: เลื่อนรายการกลับขึ้นบนสุด (ถ้าหัวแถบรายการเลื่อนพ้นจอไปแล้วก็เลื่อนหน้าขึ้นมาด้วย)
+  const goPage = (p: number) => {
+    setF({ page: p > 1 ? String(p) : '', id: '' })
+    listRef.current?.scrollTo({ top: 0 })
+    const top = paneRef.current?.getBoundingClientRect().top ?? 0
+    if (top < 0) window.scrollBy({ top: top - 80 })
+  }
 
   const select = (id: string) => {
-    setF({ id })
+    setF({ id }, { keepPage: true })
     // จอเล็ก: เลื่อนลงไปที่ส่วนแสดงโค้ด
     if (window.matchMedia('(max-width: 1023px)').matches) {
       requestAnimationFrame(() => viewerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
@@ -45,7 +59,7 @@ export default function CodeLibrary() {
       />
 
       <div className="grid gap-4 lg:grid-cols-[22rem_minmax(0,1fr)]">
-        <section className="panel flex min-w-0 flex-col overflow-hidden lg:sticky lg:top-20 lg:max-h-[calc(100dvh-7rem)]">
+        <section ref={paneRef} className="panel flex min-w-0 flex-col overflow-hidden lg:sticky lg:top-20 lg:max-h-[calc(100dvh-7rem)]">
           <div className="flex flex-col gap-2 border-b border-line p-4">
             <SearchBox value={f.q} onChange={(q) => setF({ q, id: '' })} placeholder="ค้นหาชื่อฟังก์ชัน โค้ด หรือชื่อโครงงาน" />
             <select className="input" value={f.lang} onChange={(e) => setF({ lang: e.target.value, id: '' })} aria-label="ภาษา">
@@ -69,16 +83,19 @@ export default function CodeLibrary() {
             )}
           </div>
           <Async q={res}>
-            {({ codes }) => (
+            {({ codes, total, pageSize }) => (
               <>
                 <div className="flex items-center gap-2 border-b border-line px-4 py-2 text-xs text-muted">
-                  {codes.length.toLocaleString('th-TH')} รายการ{codes.length >= 300 && ' (แสดง 300 รายการล่าสุด)'}
+                  พบ {total.toLocaleString('th-TH')} รายการ
                   {res.isFetching && <Spinner className="size-3.5" />}
                 </div>
-                {codes.length === 0 ? (
+                {total === 0 ? (
                   <Empty icon={SearchX} title="ไม่พบโค้ด">ลองเปลี่ยนคำค้นหรือภาษา</Empty>
                 ) : (
-                  <ul className="max-h-96 overflow-y-auto lg:max-h-none lg:min-h-0 lg:flex-1">
+                  <ul
+                    ref={listRef}
+                    className={cx('max-h-96 overflow-y-auto transition-opacity lg:max-h-none lg:min-h-0 lg:flex-1', res.isPlaceholderData && 'opacity-60')}
+                  >
                     {codes.map((c) => {
                       const active = c.id === selected?.id
                       return (
@@ -106,6 +123,7 @@ export default function CodeLibrary() {
                     })}
                   </ul>
                 )}
+                <Pagination compact className="shrink-0 border-t border-line px-3 py-2.5" page={page} pageSize={pageSize} total={total} onChange={goPage} />
               </>
             )}
           </Async>

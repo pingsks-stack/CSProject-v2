@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url'
 // โฟลเดอร์ server/ (ใช้อ้างที่เก็บไฟล์อัปโหลดและข้อมูล MongoDB ตอนพัฒนา)
 export const serverRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
-dotenv.config({ quiet: true })
+// อ่าน server/.env เสมอ ไม่ว่าจะสั่งรันจากโฟลเดอร์ไหน
+dotenv.config({ path: path.join(serverRoot, '.env'), quiet: true })
 
 const isProd = process.env.NODE_ENV === 'production'
 
@@ -18,6 +19,8 @@ export const config = {
   // คุกกี้ล็อกอินส่งเฉพาะ HTTPS (ค่าเริ่มต้นเปิดในโหมด production) ตั้ง COOKIE_SECURE=false ถ้าเปิดใช้ผ่าน HTTP ภายใน
   secureCookies: process.env.COOKIE_SECURE ? process.env.COOKIE_SECURE === 'true' : isProd,
   port: Number(process.env.PORT ?? 4000),
+  // reverse proxy ที่เชื่อถือได้ (ค่าเริ่มต้น: เครื่องเดียวกัน) เช่น 10.0.0.5 หรือ true
+  trustProxy: process.env.TRUST_PROXY?.trim() || 'loopback',
   mongoUri: process.env.MONGODB_URI?.trim() || '',
   jwtSecret: process.env.JWT_SECRET || 'dev-only-secret',
   uploadDir: path.resolve(serverRoot, process.env.UPLOAD_DIR ?? 'uploads'),

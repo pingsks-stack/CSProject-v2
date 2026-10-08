@@ -1,19 +1,19 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { Check, Copy, Dices, GraduationCap, KeyRound, Pencil, ShieldCheck, Trash2, UserPlus, Users as UsersIcon, X } from 'lucide-react'
+import { Check, Copy, Dices, FileSpreadsheet, GraduationCap, KeyRound, Pencil, ShieldCheck, Trash2, UserPlus, Users as UsersIcon, X } from 'lucide-react'
 import { useState, type ChangeEvent, type FormEvent } from 'react'
-import { useSearchParams } from 'react-router'
 import { toast } from 'sonner'
-import { SearchBox } from '../../components/filters'
+import { SearchBox, useUrlFilters } from '../../components/filters'
+import { Pagination, scrollToTop, toPage } from '../../components/Pagination'
 import { Async, Avatar, Badge, Empty, Kpi, Modal, PageHeader, Panel, Tabs, cx, useAction, useConfirm } from '../../components/ui'
 import { api, qs } from '../../lib/api'
 import { useMe } from '../../lib/auth'
 import { ROLE_TH, type Tone } from '../../lib/format'
-import type { Role, User } from '../../lib/types'
+import type { PageInfo, Role, User } from '../../lib/types'
 
 type AdminUser = User & { projects: number }
 type RoleFilter = '' | Role
 
-interface UsersRes {
+interface UsersRes extends PageInfo {
   users: AdminUser[]
   counts: Partial<Record<Role, number>>
 }
@@ -28,6 +28,7 @@ interface Issued {
 const ROLES: Role[] = ['student', 'teacher', 'admin']
 const ROLE_TONE: Record<Role, Tone> = { student: 'info', teacher: 'accent', admin: 'gold' }
 const TAB_LABEL: Record<Role, string> = { student: 'นิสิต', teacher: 'อาจารย์', admin: 'แอดมิน' }
+const PAGE_SIZE = 50
 
 // รหัสผ่านชั่วคราว 10 ตัว (ตัดตัวที่สับสนง่ายออก เช่น 0/O, 1/l/I) ชุดอักษรเดียวกับ server
 const PW_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
@@ -38,41 +39,49 @@ function randomPassword() {
 // หน้า "ผู้ใช้งาน" ของแอดมิน (แทน Admin_Users.aspx)
 export default function AdminUsers() {
   const me = useMe()
-  const [params, setParams] = useSearchParams()
-  const roleParam = params.get('role') as Role | null
-  const role: RoleFilter = roleParam && ROLES.includes(roleParam) ? roleParam : ''
-  const search = params.get('q') ?? ''
-  const setParam = (k: 'role' | 'q', v: string) =>
-    setParams((prev) => {
-      const next = new URLSearchParams(prev)
-      if (v) next.set(k, v)
-      else next.delete(k)
-      return next
-    }, { replace: true })
+  const [f, setF] = useUrlFilters(['role', 'q', 'page'] as const)
+  const role: RoleFilter = ROLES.includes(f.role as Role) ? (f.role as Role) : ''
+  const search = f.q
+  const page = toPage(f.page)
+  const setParam = (k: 'role' | 'q', v: string) => setF({ [k]: v })
+  const goPage = (p: number) => {
+    setF({ page: p > 1 ? String(p) : '' })
+    scrollToTop()
+  }
 
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<AdminUser | null>(null)
   const [issued, setIssued] = useState<Issued | null>(null)
 
   const q = useQuery({
-    queryKey: ['admin', 'users', role, search],
-    queryFn: () => api.get<UsersRes>(`/admin/users${qs({ role, q: search })}`),
+    queryKey: ['admin', 'users', role, search, page],
+    queryFn: () => api.get<UsersRes>(`/admin/users${qs({ role, q: search, page, pageSize: PAGE_SIZE })}`),
     placeholderData: keepPreviousData,
   })
   const counts = q.data?.counts
   const count = (r: Role) => (counts ? counts[r] ?? 0 : undefined)
-  const total = counts ? ROLES.reduce((n, r) => n + (counts[r] ?? 0), 0) : undefined
+  const allUsers = counts ? ROLES.reduce((n, r) => n + (counts[r] ?? 0), 0) : undefined
   const kpi = (r: Role) => count(r)?.toLocaleString('th-TH') ?? '–'
 
   return (
     <>
       <PageHeader
         title="ผู้ใช้งาน"
-        subtitle="สร้างบัญชีอาจารย์/นิสิต เปลี่ยนบทบาท และรีเซ็ตรหัสผ่าน"
+        subtitle="สร้างบัญชีอาจารย์/นิสิต เปลี่ยนบทบาท รีเซ็ตรหัสผ่าน และส่งออกรายชื่อเป็นไฟล์ Excel (CSV รองรับภาษาไทย)"
         actions={
-          <button type="button" className={cx('btn', creating ? 'btn-ghost' : 'btn-primary')} onClick={() => setCreating((v) => !v)}>
-            {creating ? <><X /> ปิดแบบฟอร์ม</> : <><UserPlus /> สร้างบัญชีใหม่</>}
-          </button>
+          <>
+            {/* ส่งออกตามแท็บบทบาทที่เลือก (ไม่กรองตามคำค้น) */}
+            <a
+              href={`/api/admin/export/users.csv${qs({ role, q: search })}`}
+              className="btn btn-ghost"
+              title={`ดาวน์โหลดรายชื่อ${role ? TAB_LABEL[role] : 'ผู้ใช้ทั้งหมด'}เป็นไฟล์ CSV เปิดด้วย Excel ได้ (รองรับภาษาไทย)`}
+            >
+              <FileSpreadsheet /> ส่งออก Excel{role && <span className="text-muted">· {TAB_LABEL[role]}</span>}
+            </a>
+            <button type="button" className={cx('btn', creating ? 'btn-ghost' : 'btn-primary')} onClick={() => setCreating((v) => !v)}>
+              {creating ? <><X /> ปิดแบบฟอร์ม</> : <><UserPlus /> สร้างบัญชีใหม่</>}
+            </button>
+          </>
         }
       />
 
@@ -90,40 +99,43 @@ export default function AdminUsers() {
             value={role}
             onChange={(v) => setParam('role', v)}
             items={[
-              { value: '', label: 'ทั้งหมด', count: total },
+              { value: '', label: 'ทั้งหมด', count: allUsers },
               ...ROLES.map((r) => ({ value: r, label: TAB_LABEL[r], count: count(r) })),
             ]}
           />
           <SearchBox value={search} onChange={(v) => setParam('q', v)} placeholder="ชื่อ ชื่อผู้ใช้ อีเมล หรือรหัสนิสิต" />
         </div>
         <Async q={q}>
-          {({ users }) =>
-            users.length === 0 ? (
-              <Empty icon={UsersIcon} title="ไม่พบผู้ใช้">
-                {search ? `ไม่พบผู้ใช้ที่ตรงกับ "${search}"` : undefined}
-              </Empty>
-            ) : (
-              <div className={cx('overflow-x-auto transition-opacity', q.isPlaceholderData && 'opacity-60')}>
-                <table className="table min-w-[760px]">
-                  <thead>
-                    <tr>
-                      <th>ผู้ใช้</th>
-                      <th>อีเมล</th>
-                      <th>บทบาท</th>
-                      <th>รหัสนิสิต / เบอร์</th>
-                      <th className="text-center">โครงงาน</th>
-                      <th className="text-right">จัดการ</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map((u) => (
-                      <UserRow key={u.id} u={u} self={u.id === me.id} onEdit={setEditing} onIssued={setIssued} />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )
-          }
+          {({ users, total, pageSize }) => (
+            <>
+              {total === 0 ? (
+                <Empty icon={UsersIcon} title="ไม่พบผู้ใช้">
+                  {search ? `ไม่พบผู้ใช้ที่ตรงกับ "${search}"` : undefined}
+                </Empty>
+              ) : (
+                <div className={cx('overflow-x-auto transition-opacity', q.isPlaceholderData && 'opacity-60')}>
+                  <table className="table min-w-[760px]">
+                    <thead>
+                      <tr>
+                        <th>ผู้ใช้</th>
+                        <th>อีเมล</th>
+                        <th>บทบาท</th>
+                        <th>รหัสนิสิต / เบอร์</th>
+                        <th className="text-center">โครงงาน</th>
+                        <th className="text-right">จัดการ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map((u) => (
+                        <UserRow key={u.id} u={u} self={u.id === me.id} onEdit={setEditing} onIssued={setIssued} />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <Pagination className="border-t border-line px-4 py-3" page={page} pageSize={pageSize} total={total} onChange={goPage} />
+            </>
+          )}
         </Async>
       </section>
 

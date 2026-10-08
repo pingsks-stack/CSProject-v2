@@ -7,17 +7,21 @@ import { cx } from './ui'
 // ตัวกรองและช่องค้นหาที่ใช้ร่วมกันในหน้าค้นหา คลังโครงงาน และคลังซอร์สโค้ด
 
 // ตัวกรองเก็บใน URL (?q=&type=…) เพื่อแชร์ลิงก์และกดย้อนกลับได้
+// เปลี่ยนค่าอื่นเมื่อไร ?page= จะถูกล้าง (กลับไปหน้า 1) เว้นแต่ส่ง page มาด้วย หรือสั่ง keepPage (เช่นแค่เลือกรายการ)
 export function useUrlFilters<K extends string>(keys: readonly K[]) {
   const [params, setParams] = useSearchParams()
   const values = Object.fromEntries(keys.map((k) => [k, params.get(k) ?? ''])) as Record<K, string>
-  const set = (patch: Partial<Record<K, string>>) =>
+  const set = (patch: Partial<Record<K, string>>, opts: { keepPage?: boolean } = {}) =>
     setParams(
       (prev) => {
         const next = new URLSearchParams(prev)
+        let changed = false
         for (const [k, v] of Object.entries(patch) as [string, string | undefined][]) {
+          if (k !== 'page' && (prev.get(k) ?? '') !== (v ?? '')) changed = true
           if (v) next.set(k, v)
           else next.delete(k)
         }
+        if (changed && !opts.keepPage && !('page' in patch)) next.delete('page')
         return next
       },
       { replace: true },
