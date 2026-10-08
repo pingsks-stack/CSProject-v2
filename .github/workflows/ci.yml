@@ -86,8 +86,12 @@ jobs:
             exit 1
           fi
           echo "token เข้าถึง Account ID ที่ตั้งไว้ได้"
-          echo "อ่านรายการ Workers: $(api "/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts" | jq -c '{success, errors: [.errors[]? | {code, message}]}')"
-          echo "แผน Workers: $(api "/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subscription" | jq -c '{success, errors: [.errors[]? | {code, message}]}')"
+          # สิทธิ์ที่ wrangler deploy ใช้ (แสดงแค่ผ่าน/ไม่ผ่านและรหัส error)
+          check() { echo "$1: $(api "/accounts/$CLOUDFLARE_ACCOUNT_ID$2" | jq -c '{success, errors: [.errors[]? | {code, message}]}')"; }
+          check "Workers Scripts" /workers/scripts
+          check "workers.dev subdomain" /workers/subdomain
+          check "Durable Objects" /workers/durable_objects/namespaces
+          check "Containers" /containers/applications
 
       - uses: actions/checkout@v5
         if: steps.cf.outputs.ready == 'true'
@@ -110,4 +114,5 @@ jobs:
       # deploy พัง: แสดงรหัส/ข้อความ error จาก API ของ Cloudflare (ใน log ของ wrangler)
       - name: Show Cloudflare API errors
         if: failure() && steps.cf.outputs.ready == 'true'
-        run: grep -hoE '"(code|message)": ?("[^"]*"|[0-9]+)' ~/.config/.wrangler/logs/*.log | sort | uniq -c | tail -30 || true
+        run: |
+          grep -hoE '"(code|message)": ?("[^"]*"|[0-9]+)' ~/.config/.wrangler/logs/*.log | sort | uniq -c | tail -30 || true
