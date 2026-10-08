@@ -39,8 +39,44 @@ jobs:
       - run: npm run build
       - run: npm test
 
-  # deploy เดโมขึ้น Cloudflare Containers หลังเทสต์ผ่าน (เฉพาะ push เข้า main)
-  # ต้องตั้ง secrets: CLOUDFLARE_API_TOKEN และ CLOUDFLARE_ACCOUNT_ID (ดู docs/DEMO.md) ถ้ายังไม่ตั้งจะข้ามไป
+  # ทดสอบ image เดโม (Dockerfile) ด้วยทรัพยากรเท่าเครื่องฟรีของ Render: RAM 512 MB, CPU 0.1
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build demo image
+        run: docker build -t csproject-demo .
+
+      - name: Start container (512 MB RAM, 0.1 CPU)
+        run: >-
+          docker run -d --name demo --memory=512m --memory-swap=512m --cpus=0.1 -p 8080:8080
+          -e TRUST_PROXY=true -e REMINDERS=off -e COOKIE_SECURE=false csproject-demo
+
+      - name: Smoke test
+        run: |
+          start=$(date +%s)
+          until curl -sf -m 10 http://localhost:8080/api/public/config > /dev/null; do
+            if [ $(( $(date +%s) - start )) -gt 240 ]; then echo "::error::container ไม่พร้อมใช้งานภายใน 4 นาที"; exit 1; fi
+            sleep 3
+          done
+          echo "พร้อมใช้งานใน $(( $(date +%s) - start )) วินาที"
+          curl -sf http://localhost:8080/ | grep -q 'id="root"'
+          curl -sf -c cookies.txt -H 'Content-Type: application/json'             -d '{"username":"demo_student","password":"Demo@1234"}' http://localhost:8080/api/auth/login > /dev/null
+          curl -sf -b cookies.txt http://localhost:8080/api/auth/me | jq -e '.user.username == "demo_student"'
+          curl -sf http://localhost:8080/api/public/projects | jq -e '.projects | length > 0' > /dev/null
+          docker stats --no-stream --format 'หน่วยความจำ: {{.MemUsage}}' demo
+
+      - name: Container logs
+        if: always()
+        run: |
+          docker logs demo 2>&1 | tail -40
+          echo "OOMKilled: $(docker inspect demo --format '{{.State.OOMKilled}}')"
+
+  # deploy เดโมขึ้น Cloudflare Containers หลังเทสต์ผ่าน (เฉพาะ push เข้า main) — ทางเลือกแบบเสียเงิน
+  # ต้องตั้ง secrets: CLOUDFLARE_API_TOKEN และ CLOUDFLARE_ACCOUNT_ID (ดู docs/DEMO.md)
+  # ถ้ายังไม่ตั้ง หรือบัญชียังไม่มีแผน Workers Paid จะข้ามไป (CI ยังผ่าน)
   deploy-demo:
     needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -64,6 +100,7 @@ jobs:
 
       # ตรวจ token/Account ID ก่อน build (ไม่แสดงค่าลับหรือชื่อบัญชีใน log เพราะ repo เป็น public)
       - name: Verify Cloudflare token
+        id: verify
         if: steps.cf.outputs.ready == 'true'
         run: |
           api() { curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4$1"; }
@@ -93,30 +130,31 @@ jobs:
           check "Durable Objects" /workers/durable_objects/namespaces
           check "Containers" /containers/applications
           if ! api "/accounts/$CLOUDFLARE_ACCOUNT_ID/containers/applications" | jq -e '.success' > /dev/null; then
-            echo "::error::บัญชี Cloudflare ยังใช้ Containers ไม่ได้ — ต้องสมัครแผน Workers Paid ก่อน (Workers & Pages → Plans) แล้วกด Re-run job นี้"
-            exit 1
+            echo "::warning::บัญชี Cloudflare ยังไม่มีแผน Workers Paid (Containers ต้องใช้) จึงข้ามการ deploy ไป Cloudflare — เดโมฟรีใช้ Render แทน ดู docs/DEMO.md"
+            exit 0
           fi
+          echo "ok=true" >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@v5
-        if: steps.cf.outputs.ready == 'true'
+        if: steps.verify.outputs.ok == 'true'
 
       - uses: actions/setup-node@v5
-        if: steps.cf.outputs.ready == 'true'
+        if: steps.verify.outputs.ok == 'true'
         with:
           node-version: 22
 
       - name: Install wrangler
-        if: steps.cf.outputs.ready == 'true'
+        if: steps.verify.outputs.ok == 'true'
         working-directory: deploy/cloudflare
         run: npm ci
 
       - name: Deploy to Cloudflare (builds ../../Dockerfile)
-        if: steps.cf.outputs.ready == 'true'
+        if: steps.verify.outputs.ok == 'true'
         working-directory: deploy/cloudflare
         run: npx wrangler deploy
 
       # deploy พัง: แสดงรหัส/ข้อความ error จาก API ของ Cloudflare (ใน log ของ wrangler)
       - name: Show Cloudflare API errors
-        if: failure() && steps.cf.outputs.ready == 'true'
+        if: failure() && steps.verify.outputs.ok == 'true'
         run: |
           grep -hoE '"(code|message)": ?("[^"]*"|[0-9]+)' ~/.config/.wrangler/logs/*.log | sort | uniq -c | tail -30 || true

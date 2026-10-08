@@ -1,0 +1,24 @@
+# เดโมฟรีบน Render (Blueprint) — วิธีใช้ดู docs/DEMO.md
+# Render สร้าง image จาก Dockerfile แล้ว deploy ใหม่เองทุกครั้งที่ push เข้า main และ GitHub Actions ผ่าน
+services:
+  - type: web
+    name: csproject-demo
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/public/config
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DEMO_MODE
+        value: "true"
+      - key: PORT
+        value: "8080"
+      - key: TRUST_PROXY
+        value: "true"
+      - key: REMINDERS
+        value: "off"
