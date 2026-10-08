@@ -1,0 +1,18 @@
+# ไลบรารีและไฟล์ที่ build แล้ว
+node_modules/
+client/dist/
+server/dist/
+
+# ค่าตั้งที่มีรหัสผ่าน
+server/.env
+
+# ข้อมูลของเครื่องพัฒนา (MongoDB, ไฟล์อัปโหลด, อีเมลทดสอบ) และไฟล์สำรอง
+server/data/
+server/uploads/
+backups/
+
+# log และไฟล์ชั่วคราว
+*.log
+.playwright-mcp/
+.DS_Store
+Thumbs.db
