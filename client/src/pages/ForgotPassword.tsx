@@ -1,14 +1,14 @@
-import { useQuery } from '@tanstack/react-query'
 import { MailCheck, Send } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { Spinner } from '../components/ui'
 import { api } from '../lib/api'
+import { usePublicConfig } from '../lib/queries'
 import { AuthShell } from './Login'
 
 // ลืมรหัสผ่าน: ส่งลิงก์ตั้งรหัสผ่านใหม่ไปที่อีเมลของบัญชี
 export default function ForgotPassword() {
-  const config = useQuery({ queryKey: ['public', 'config'], queryFn: () => api.get<{ mailEnabled: boolean }>('/public/config') })
+  const config = usePublicConfig()
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)

@@ -6,6 +6,7 @@ import {
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { api } from '../lib/api'
+import { usePublicConfig } from '../lib/queries'
 import { useAuth, useMe } from '../lib/auth'
 import { ROLE_TH, timeAgo } from '../lib/format'
 import type { Notification, Role } from '../lib/types'
@@ -122,6 +123,7 @@ export function Layout() {
   const location = useLocation()
   const notes = useNotifications()
   const pending = usePendingRequests(user.role)
+  const demo = usePublicConfig().data?.demo
 
   useEffect(() => setMobileOpen(false), [location.pathname])
 
@@ -196,6 +198,11 @@ export function Layout() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar onMenu={() => setMobileOpen(true)} />
+        {demo && (
+          <div className="no-print border-b border-gold/30 bg-gold/10 px-4 py-1.5 text-center text-xs text-ink">
+            ระบบทดลอง (เดโม) — ข้อมูลเป็นตัวอย่าง และจะถูกล้างกลับเป็นค่าเริ่มต้นเมื่อไม่มีผู้ใช้งานสักพัก
+          </div>
+        )}
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
           <Outlet />
         </main>

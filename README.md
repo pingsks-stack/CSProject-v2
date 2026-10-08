@@ -10,7 +10,7 @@
 | ฐานข้อมูล | MongoDB |
 
 > เวอร์ชัน 2 (repo นี้) เขียนใหม่ทั้งหมดแทนระบบเดิม (ASP.NET Web Forms) ซึ่งอยู่ใน repo [CSProject](https://github.com/pingsks-stack/CSProject)
-> วิธีติดตั้งบนเซิร์ฟเวอร์ดูที่ [docs/INSTALL.md](docs/INSTALL.md)
+> วิธีติดตั้งบนเซิร์ฟเวอร์ดูที่ [docs/INSTALL.md](docs/INSTALL.md) · เปิดเป็นเดโมบน Cloudflare ดูที่ [docs/DEMO.md](docs/DEMO.md)
 
 ## โครงสร้างโฟลเดอร์
 
@@ -31,7 +31,9 @@ CSProject/
 │  ├─ test/                ชุดทดสอบ API (npm test)
 │  ├─ uploads/             ไฟล์ที่ผู้ใช้อัปโหลด (ไม่เก็บใน git)
 │  └─ data/                MongoDB ของเครื่องพัฒนา (ไม่เก็บใน git)
-├─ docs/                   คู่มือติดตั้ง
+├─ docs/                   คู่มือติดตั้ง (INSTALL.md) และเดโมบน Cloudflare (DEMO.md)
+├─ deploy/cloudflare/      Worker สำหรับเดโมบน Cloudflare Containers
+├─ Dockerfile              image เดโม (หน้าเว็บ + API + MongoDB ชั่วคราว)
 ├─ .github/workflows/      GitHub Actions (typecheck, build, test ทุกครั้งที่ push)
 └─ package.json            สั่งรัน client + server พร้อมกัน
 ```
@@ -120,6 +122,11 @@ npm run dev
 ## รายงานสำหรับแอดมิน
 
 ส่งออกเป็นไฟล์ CSV (เปิดด้วย Excel ภาษาไทยไม่เพี้ยน): รายชื่อโครงงานตามตัวกรอง (หน้า "โครงงานทั้งหมด"), สถานะการส่งเอกสารรายบทของภาคการศึกษา (หน้า "กำหนดส่งงาน") และรายชื่อผู้ใช้ (หน้า "ผู้ใช้งาน")
+
+## เดโมออนไลน์
+
+เปิดให้คนทั่วไปลองใช้บน Cloudflare Containers ได้ (deploy อัตโนมัติจาก GitHub Actions) ข้อมูลเป็นตัวอย่างและรีเซ็ตเองเมื่อไม่มีผู้ใช้สักพัก
+หน้าเข้าสู่ระบบแสดงบัญชีทดสอบให้กดเข้าได้ทันที — วิธีตั้งค่าดูที่ [docs/DEMO.md](docs/DEMO.md)
 
 ## ติดตั้งบนเซิร์ฟเวอร์จริง
 

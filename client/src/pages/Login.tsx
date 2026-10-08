@@ -1,8 +1,11 @@
-import { GraduationCap, Library, LogIn } from 'lucide-react'
+import { FlaskConical, GraduationCap, Library, LogIn } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { Spinner } from '../components/ui'
 import { useAuth } from '../lib/auth'
+import { ROLE_TH } from '../lib/format'
+import { usePublicConfig } from '../lib/queries'
+import type { Role } from '../lib/types'
 
 export function AuthShell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
@@ -31,13 +34,13 @@ export default function Login() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const f = new FormData(e.currentTarget)
+  const config = usePublicConfig()
+
+  const doLogin = async (username: string, password: string) => {
     setBusy(true)
     setError('')
     try {
-      await login(String(f.get('username')), String(f.get('password')))
+      await login(username, password)
       const from = (location.state as { from?: string } | null)?.from
       navigate(from && from !== '/login' ? from : '/', { replace: true })
     } catch (err) {
@@ -46,6 +49,14 @@ export default function Login() {
       setBusy(false)
     }
   }
+
+  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const f = new FormData(e.currentTarget)
+    doLogin(String(f.get('username')), String(f.get('password')))
+  }
+
+  const demo = config.data?.demo
 
   return (
     <AuthShell title="เข้าสู่ระบบ" subtitle="ระบบติดตามโครงงาน CS Project">
@@ -66,6 +77,26 @@ export default function Login() {
           {busy ? <Spinner className="text-accent-ink" /> : <LogIn />} เข้าสู่ระบบ
         </button>
       </form>
+      {demo && (
+        <div className="mt-6 rounded-xl border border-gold/40 bg-gold/10 p-4">
+          <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-ink"><FlaskConical className="size-4 text-gold" /> ระบบทดลอง (เดโม)</div>
+          <p className="mb-3 text-xs text-muted">ข้อมูลทั้งหมดเป็นข้อมูลตัวอย่าง และจะถูกล้างกลับเป็นค่าเริ่มต้นเมื่อไม่มีผู้ใช้งานสักพัก กดเพื่อเข้าใช้ด้วยบัญชีทดสอบ (รหัสผ่าน {demo.password})</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {demo.accounts.map((a) => (
+              <button
+                key={a.username}
+                type="button"
+                disabled={busy}
+                onClick={() => doLogin(a.username, demo.password)}
+                className="rounded-lg border border-line bg-surface px-3 py-2 text-left text-sm hover:border-accent hover:bg-accent/5"
+              >
+                <span className="block font-mono text-xs font-semibold text-accent">{a.username}</span>
+                <span className="block text-xs text-muted">{ROLE_TH[a.role as Role] ?? a.role} · {a.note}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <p className="mt-6 text-center text-sm text-muted">
         นิสิตที่ยังไม่มีบัญชี <Link to="/register">สมัครสมาชิก</Link>
       </p>

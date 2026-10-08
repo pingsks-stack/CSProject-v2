@@ -1285,7 +1285,8 @@ describe('public showcase (no login)', () => {
   }
 
   test('config and meta', async () => {
-    assert.deepEqual((await anon.get('/public/config')).data, { mailEnabled: true })
+    // นอกโหมดเดโม ไม่แสดงบัญชีทดสอบ
+    assert.deepEqual((await anon.get('/public/config')).data, { mailEnabled: true, demo: null })
     const m = (await anon.get('/public/meta')).data
     assert.equal(m.total, 2)
     assert.deepEqual(m.terms, [seed.lastTerm])

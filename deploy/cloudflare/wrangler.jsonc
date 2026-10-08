@@ -1,0 +1,24 @@
+// เดโมบน Cloudflare Containers: Worker รับคำขอทั้งหมดแล้วส่งต่อให้ container เดียว (ดู ../../Dockerfile)
+// deploy: npm run deploy (ต้องมี Docker) หรือให้ GitHub Actions deploy ให้เมื่อ push ขึ้น main
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "csproject-demo",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "observability": { "enabled": true },
+  "containers": [
+    {
+      "class_name": "CSProjectDemo",
+      "image": "../../Dockerfile",
+      "image_build_context": "../..",
+      "instance_type": "basic",
+      "max_instances": 1
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "CSPROJECT_DEMO", "class_name": "CSProjectDemo" }]
+  },
+  "exports": {
+    "CSProjectDemo": { "type": "durable-object", "storage": "sqlite" }
+  }
+}

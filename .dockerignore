@@ -1,0 +1,11 @@
+**/node_modules
+client/dist
+server/dist
+server/data
+server/uploads
+server/.env
+backups
+deploy
+.git
+.github
+*.log

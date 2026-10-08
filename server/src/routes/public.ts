@@ -9,6 +9,7 @@ import { Project, type ProjectDoc } from '../models/Project.js'
 import { CHAPTERS, Submission } from '../models/Submission.js'
 import { User } from '../models/User.js'
 import { Code, ProjectFile, orderedTypes } from '../models/misc.js'
+import { config } from '../config.js'
 import { mailEnabled } from '../lib/mail.js'
 
 // คลังโครงงานสาธารณะ (ไม่ต้องล็อกอิน) ให้รุ่นน้องดูโครงงานที่ผ่านแล้วของรุ่นพี่
@@ -47,7 +48,21 @@ function summary(p: ProjectDoc) {
 
 // ค่าที่หน้าเว็บต้องรู้ก่อนล็อกอิน
 publicRouter.get('/config', (_req, res) => {
-  res.json({ mailEnabled: mailEnabled() })
+  res.json({
+    mailEnabled: mailEnabled(),
+    // โหมดเดโม: หน้าเข้าสู่ระบบแสดงบัญชีทดสอบ (รหัสผ่านตามข้อมูลตัวอย่าง)
+    demo: config.demoMode
+      ? {
+          password: 'Demo@1234',
+          accounts: [
+            { role: 'student', username: 'demo_student', note: 'มีโครงงานที่กำลังทำ' },
+            { role: 'student', username: 'demo_student7', note: 'ยังไม่มีโครงงาน ลองสร้างใหม่' },
+            { role: 'teacher', username: 'demo_teacher', note: 'อาจารย์ที่ปรึกษา' },
+            { role: 'admin', username: 'demo_admin', note: 'ผู้ดูแลระบบ' },
+          ],
+        }
+      : null,
+  })
 })
 
 publicRouter.get('/meta', async (_req, res) => {

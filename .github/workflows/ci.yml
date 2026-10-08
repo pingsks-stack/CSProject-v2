@@ -38,3 +38,44 @@ jobs:
         run: npx tsc -p server/test --noEmit
       - run: npm run build
       - run: npm test
+
+  # deploy เดโมขึ้น Cloudflare Containers หลังเทสต์ผ่าน (เฉพาะ push เข้า main)
+  # ต้องตั้ง secrets: CLOUDFLARE_API_TOKEN และ CLOUDFLARE_ACCOUNT_ID (ดู docs/DEMO.md) ถ้ายังไม่ตั้งจะข้ามไป
+  deploy-demo:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: deploy-demo
+      cancel-in-progress: false
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Check Cloudflare secrets
+        id: cf
+        run: |
+          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::ยังไม่ได้ตั้ง CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID จึงข้ามการ deploy เดโม"
+          fi
+
+      - uses: actions/checkout@v5
+        if: steps.cf.outputs.ready == 'true'
+
+      - uses: actions/setup-node@v5
+        if: steps.cf.outputs.ready == 'true'
+        with:
+          node-version: 22
+
+      - name: Install wrangler
+        if: steps.cf.outputs.ready == 'true'
+        working-directory: deploy/cloudflare
+        run: npm ci
+
+      - name: Deploy to Cloudflare (builds ../../Dockerfile)
+        if: steps.cf.outputs.ready == 'true'
+        working-directory: deploy/cloudflare
+        run: npx wrangler deploy
